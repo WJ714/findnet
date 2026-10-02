@@ -1,0 +1,8 @@
+# ad build output and downloaded models
+marketing/render/build/
+marketing/render/models/
+marketing/render/fonts/
+# python / os
+__pycache__/
+*.pyc
+.DS_Store
