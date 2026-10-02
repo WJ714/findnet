@@ -1,0 +1,83 @@
+{
+  "db": {
+    "rules": [
+      {
+        "path": "activities",
+        "read": "view",
+        "write": "interact"
+      },
+      {
+        "path": "going",
+        "read": "view",
+        "write": "owner"
+      },
+      {
+        "path": "going/{self}",
+        "write": "interact"
+      },
+      {
+        "path": "follows",
+        "read": "view",
+        "write": "owner"
+      },
+      {
+        "path": "follows/{self}",
+        "write": "interact"
+      },
+      {
+        "path": "keys",
+        "read": "view",
+        "write": "owner"
+      },
+      {
+        "path": "keys/{self}",
+        "write": "interact"
+      },
+      {
+        "path": "shares",
+        "read": "view",
+        "write": "owner"
+      },
+      {
+        "path": "shares/{self}",
+        "write": "interact"
+      },
+      {
+        "path": "outbox",
+        "read": "view",
+        "write": "owner"
+      },
+      {
+        "path": "outbox/{self}",
+        "write": "interact"
+      },
+      {
+        "path": "profiles",
+        "read": "view",
+        "write": "owner"
+      },
+      {
+        "path": "profiles/{self}",
+        "write": "interact"
+      },
+      {
+        "path": "dogs",
+        "read": "view",
+        "write": "owner"
+      },
+      {
+        "path": "dogs/{self}",
+        "write": "interact"
+      },
+      {
+        "path": "data/users/{self}",
+        "write": "interact"
+      }
+    ]
+  },
+  "user": {
+    "scopes": [
+      "profile"
+    ]
+  }
+}

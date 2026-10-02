@@ -1,0 +1,1315 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright 2026 Weijie Zhang. FindNet prototype: runs inside a claude.ai Artifact (see README). -->
+<title>FindNet 约运动</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&family=Outfit:wght@600;700&display=swap">
+<style>
+/* Layout: one scrolling column per tab (活动 / 好友 / 我的), fixed tab bar at the foot, full-screen sheets for create, people, chat. */
+:root{
+  --bg:#FBF6EC; --surface:#FFFFFF; --sunk:#F2E9D8;
+  --line:#E4D9C6; --ink:#14201E; --muted:#66746F;
+  --teal:#0D6B5D; --teal-soft:#E2EFEB; --coral:#D9552E; --on-coral:#FFFFFF;
+  --font-ui:"Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --font-brand:"Outfit","Noto Sans SC",system-ui,sans-serif;
+  --r:16px;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#111A18; --surface:#1B2523; --sunk:#16201E;
+  --line:#2E3C39; --ink:#F1EBE1; --muted:#97A7A2;
+  --teal:#4FBFA8; --teal-soft:#16302B; --coral:#FF7A52; --on-coral:#1A0D08;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#111A18; --surface:#1B2523; --sunk:#16201E;
+  --line:#2E3C39; --ink:#F1EBE1; --muted:#97A7A2;
+  --teal:#4FBFA8; --teal-soft:#16302B; --coral:#FF7A52; --on-coral:#1A0D08;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:18px;line-height:1.55;-webkit-text-size-adjust:100%}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer}
+input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 130px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.mark{width:34px;height:34px;border-radius:10px;background:var(--teal);display:grid;place-items:center;flex:none}
+.mark svg{width:17px;height:17px;display:block}
+.brand{font-family:var(--font-brand);font-weight:700;font-size:25px;letter-spacing:-.01em}
+.title{font-size:23px;font-weight:900}
+.tagline{margin-left:auto;font-size:15px;color:var(--muted)}
+.close{margin-left:auto;background:none;border:0;font-size:18px;color:var(--teal);font-weight:700;padding:10px 4px}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs .inner{max-width:560px;margin:0 auto;display:flex}
+.tabs button{flex:1;min-height:66px;border:0;border-top:3px solid transparent;background:none;font-size:19px;font-weight:700;color:var(--muted);position:relative}
+.tabs button[aria-current="page"]{color:var(--teal);border-top-color:var(--teal)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--coral);margin-left:6px;vertical-align:4px}
+
+/* month */
+.month{background:var(--teal-soft);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px 20px;margin-bottom:18px}
+.month h2{margin:0 0 14px;font-size:17px;font-weight:700;color:var(--teal);letter-spacing:.04em}
+.figs{display:flex;gap:10px;margin-bottom:18px}
+.fig{flex:1;min-width:0}
+.fig b{display:block;font-size:30px;font-weight:900;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.fig span{display:block;font-size:14px;color:var(--muted);margin-top:3px}
+.fig button{background:none;border:0;padding:0;font-size:14px;color:var(--teal);text-decoration:underline;margin-top:3px}
+.track{height:10px;border-radius:5px;background:var(--sunk);overflow:hidden}
+.fill{height:100%;border-radius:5px;background:var(--teal)}
+.lot{margin:10px 0 0;font-size:16px;color:var(--muted)}
+.lot b{color:var(--ink);font-weight:700}
+
+/* buttons */
+.new{width:100%;min-height:60px;border-radius:14px;border:0;background:var(--teal);color:var(--bg);font-size:21px;font-weight:700;margin-bottom:6px}
+.btn{width:100%;min-height:58px;border-radius:12px;border:2px solid transparent;font-size:21px;font-weight:700;letter-spacing:.02em;background:var(--coral);color:var(--on-coral)}
+.btn.on{background:transparent;border-color:var(--teal);color:var(--teal)}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--ink);margin-top:10px}
+.btn.here{background:var(--teal-soft);border-color:var(--teal);color:var(--teal);margin-top:10px}
+.btn[disabled],.new[disabled],.sm[disabled]{opacity:.45;cursor:default}
+.sm{flex:none;min-height:46px;padding:0 16px;border-radius:10px;border:2px solid var(--teal);background:var(--teal);color:var(--bg);font-size:17px;font-weight:700}
+.sm.out{background:transparent;color:var(--teal)}
+.sm.warn{background:transparent;border-color:var(--line);color:var(--muted)}
+.link{background:none;border:0;padding:8px 2px;font-size:16px;color:var(--muted);text-decoration:underline}
+.hint{margin:9px 0 0;font-size:15px;color:var(--muted);text-align:center}
+
+/* day + card */
+.day{display:flex;align-items:baseline;gap:10px;margin:30px 0 14px}
+.day h2{margin:0;font-size:23px;font-weight:900;letter-spacing:-.01em}
+.day span{font-size:16px;color:var(--muted)}
+.day i{flex:1;height:1px;background:var(--line)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:14px}
+.card h3{margin:0 0 6px;font-size:26px;font-weight:700;line-height:1.3;letter-spacing:-.01em;text-wrap:balance}
+.meta{margin:0 0 14px;font-size:19px;color:var(--muted)}
+.meta b{color:var(--teal);font-weight:700;font-variant-numeric:tabular-nums}
+.who{display:flex;align-items:center;gap:9px;margin:0 0 16px;min-height:34px;width:100%;background:none;border:0;padding:0;text-align:left}
+.faces{display:flex;flex:none}
+.faces img{width:34px;height:34px;border-radius:50%;border:2px solid var(--surface);margin-right:-9px;background:var(--sunk);object-fit:cover}
+.faces img:last-child{margin-right:0}
+.who p{margin:0;font-size:17px;color:var(--muted);min-width:0;flex:1}
+.who .more{flex:none;font-size:15px;color:var(--teal)}
+.mine{margin:12px 0 0;text-align:right}
+.privacy{margin:10px 0 0;font-size:14px;color:var(--muted);text-align:center}
+
+/* people */
+.sec{margin:28px 0 4px;font-size:16px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.row img{width:50px;height:50px;border-radius:50%;flex:none;background:var(--sunk);object-fit:cover}
+.row .nm{flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;font-size:20px;font-weight:500;overflow-wrap:anywhere}
+.row .nm small{display:block;font-size:15px;color:var(--muted);font-weight:400}
+.search{width:100%;min-height:56px;padding:0 16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-size:19px}
+.search:focus-visible{outline:none;border-color:var(--teal)}
+.person{text-align:center;padding:10px 0 20px}
+.person img{width:96px;height:96px;border-radius:50%;background:var(--sunk);object-fit:cover}
+.person h2{margin:12px 0 4px;font-size:26px;font-weight:900}
+.person p{margin:0;color:var(--muted)}
+.stack{display:flex;flex-direction:column;gap:12px}
+
+/* options */
+.opt{display:block;width:100%;text-align:left;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.opt b{display:block;font-size:20px;margin-bottom:4px}
+.opt span{display:block;font-size:16px;color:var(--muted)}
+.opt[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-soft)}
+.opt[aria-pressed="true"] b{color:var(--teal)}
+.opt[disabled]{opacity:.5;cursor:default}
+.note{background:var(--sunk);border-radius:12px;padding:14px 16px;font-size:16px;margin:14px 0}
+.note button{display:block;margin-top:10px}
+.wset{display:flex;gap:9px;margin-top:8px}
+.wset input{flex:1;min-width:0;min-height:54px;padding:0 14px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-size:19px}
+
+/* records */
+.statcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 20px;margin-bottom:16px}
+.stathead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.stathead h2{margin:0;font-size:17px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.big{margin:0 0 16px;font-size:44px;font-weight:900;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big small{font-size:19px;font-weight:700;margin-left:6px;letter-spacing:0}
+.delta{font-size:16px;color:var(--teal);font-weight:700}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.wd{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.wd i{width:100%;max-width:44px;aspect-ratio:1;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-style:normal;font-size:19px;font-weight:900;color:var(--bg)}
+.wd.on i{background:var(--teal);border-color:var(--teal)}
+.wd.today i{box-shadow:0 0 0 2px var(--ink)}
+.wd.future i{opacity:.45}
+.wd span{font-size:15px;color:var(--muted)}
+.wd.today span{color:var(--ink);font-weight:700}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.cal .h{font-size:14px;color:var(--muted);text-align:center;padding-bottom:2px}
+.cal button{aspect-ratio:1;width:100%;border:0;border-radius:10px;background:var(--sunk);font-size:17px;font-variant-numeric:tabular-nums;color:var(--ink);padding:0}
+.cal button.on{background:var(--teal);color:var(--bg);font-weight:900}
+.cal button.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal button.future{opacity:.4;cursor:default}
+.cal button[aria-pressed="true"]{outline:3px solid var(--coral);outline-offset:1px}
+.mnav{display:flex;align-items:center;gap:6px}
+.mnav button{min-width:46px;min-height:46px;border:1px solid var(--line);background:var(--surface);border-radius:10px;font-size:22px;line-height:1;color:var(--ink)}
+.mnav button[disabled]{opacity:.35;cursor:default}
+.mnav span{font-size:18px;font-weight:700;min-width:6.5em;text-align:center}
+.dayinfo{margin-top:14px;padding:12px 14px;background:var(--sunk);border-radius:12px;font-size:17px}
+.dayinfo b{display:block;margin-bottom:4px}
+
+/* welcome */
+.welcome .wrap{min-height:100%;display:flex;flex-direction:column;justify-content:center;padding-top:40px;padding-bottom:40px}
+.hero{text-align:center;margin-bottom:34px}
+.hero .mark{width:78px;height:78px;border-radius:22px;margin:0 auto 18px}
+.hero .mark svg{width:40px;height:40px}
+.hero h1{margin:0;font-family:var(--font-brand);font-size:48px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.hero p{margin:8px 0 0;font-size:22px;font-weight:700;color:var(--teal)}
+.acct{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:18px}
+.acct img{width:50px;height:50px;border-radius:50%;background:var(--sunk);object-fit:cover;flex:none}
+.acct div{min-width:0}
+.acct small{display:block;font-size:15px;color:var(--muted)}
+.acct b{display:block;font-size:20px;overflow-wrap:anywhere}
+.ask{margin:0 0 6px;font-size:28px;font-weight:900;line-height:1.3}
+.bigin{width:100%;min-height:66px;padding:0 18px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-size:26px;margin:14px 0 10px}
+.bigin:focus-visible{outline:none;border-color:var(--teal)}
+.fine{font-size:14px;color:var(--muted);text-align:center;margin:18px 0 0}
+.steps{display:flex;justify-content:center;gap:8px;margin-bottom:26px}
+.steps i{width:28px;height:6px;border-radius:3px;background:var(--line)}
+.steps i.on{background:var(--teal)}
+
+/* two sides */
+.seg{display:flex;gap:6px;background:var(--sunk);padding:5px;border-radius:14px;margin-bottom:18px}
+.seg button{flex:1;min-width:0;min-height:54px;border:0;border-radius:10px;background:transparent;font-size:18px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--teal);box-shadow:0 1px 0 var(--line),0 0 0 1px var(--line)}
+.seg svg{width:22px;height:22px;display:block}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 14px}
+.tag{font-size:15px;padding:4px 11px;border-radius:999px;background:var(--sunk);color:var(--ink)}
+.tag.warn{background:transparent;border:1.5px solid var(--coral);color:var(--coral)}
+.dogic{width:50px;height:50px;border-radius:50%;flex:none;background:var(--teal-soft);color:var(--teal);display:grid;place-items:center}
+.dogic svg{width:26px;height:26px;display:block}
+.flabel{display:block;font-size:19px;font-weight:700;margin-bottom:10px}
+
+/* languages */
+html:lang(zh-Hant){--font-ui:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+html:lang(en){--font-ui:"Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+button:lang(zh-Hans){font-family:"Noto Sans SC","PingFang SC",system-ui,sans-serif}
+button:lang(zh-Hant){font-family:"Noto Sans TC","PingFang TC",system-ui,sans-serif}
+button:lang(en){font-family:"Noto Sans",system-ui,sans-serif}
+html:lang(en) .tabs button{font-size:16px}
+html:lang(en) .seg button{font-size:16px}
+.langs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px}
+.langs button{min-height:46px;padding:0 16px;border-radius:999px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-size:17px}
+.langs button[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-soft);color:var(--teal);font-weight:700}
+.langs.wide{justify-content:stretch;margin:10px 0 0}
+.langs.wide button{flex:1;min-width:0;padding:0 8px}
+
+/* states */
+.state{border:2px dashed var(--line);border-radius:var(--r);padding:36px 22px;text-align:center;margin-top:14px}
+.state h3{margin:0 0 10px;font-size:21px;font-weight:700}
+.state p{margin:0;color:var(--muted);font-size:17px}
+
+/* sheets */
+.sheet{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto}
+.sheet .wrap{padding-bottom:40px}
+.field{margin-bottom:26px}
+.field label{display:block;font-size:19px;font-weight:700;margin-bottom:10px}
+.field input{width:100%;min-height:58px;padding:0 16px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-size:20px}
+.field input:focus-visible{outline:none;border-color:var(--teal)}
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:11px}
+.chips button{border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:10px 17px;font-size:18px}
+.chips button[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-soft);color:var(--teal);font-weight:700}
+.err{color:var(--coral);font-size:17px;margin:0 0 16px;font-weight:500}
+.submit{width:100%;min-height:62px;border-radius:14px;border:0;background:var(--coral);color:var(--on-coral);font-size:22px;font-weight:700}
+.submit.teal{background:var(--teal);color:var(--bg)}
+.safety ul{margin:0 0 26px;padding-left:22px}
+.safety li{margin-bottom:12px;font-size:18px}
+.lead{font-size:18px;color:var(--muted);margin:0 0 20px}
+
+/* chat */
+.chat{display:flex;flex-direction:column;gap:10px;padding-bottom:110px}
+.msg{max-width:82%;padding:12px 15px;border-radius:16px;font-size:19px;line-height:1.5;overflow-wrap:anywhere;background:var(--surface);border:1px solid var(--line);align-self:flex-start}
+.msg.me{align-self:flex-end;background:var(--teal-soft);border-color:transparent}
+.msg time{display:block;font-size:13px;color:var(--muted);margin-top:4px}
+.lock{font-size:14px;color:var(--muted);text-align:center;margin:0 0 16px}
+.composer{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--bg);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+.composer .inner{max-width:560px;margin:0 auto;display:flex;gap:10px}
+.composer input{flex:1;min-width:0;min-height:56px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-size:19px}
+.composer button{flex:none;min-height:56px;padding:0 22px;border-radius:12px;border:0;background:var(--teal);color:var(--bg);font-size:19px;font-weight:700}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 22s7-7.1 7-12a7 7 0 1 0-14 0c0 4.9 7 12 7 12Z" fill="#FBF6EC"/><circle cx="12" cy="10" r="2.6" fill="#0D6B5D"/></svg></span>
+    <span class="brand">FindNet</span>
+    <span class="tagline" id="tagline" data-i18n="附近谁在动">附近谁在动</span>
+  </header>
+  <div id="view"><div class="state"><h3 data-i18n="正在看看附近…">正在看看附近…</h3><p data-i18n="马上就好">马上就好</p></div></div>
+</div>
+
+<nav class="tabs" data-i18n-aria="主菜单" aria-label="主菜单"><div class="inner">
+  <button type="button" data-tab="act" aria-current="page" data-i18n="活动">活动</button>
+  <button type="button" data-tab="log" data-i18n="记录">记录</button>
+  <button type="button" data-tab="friends"><span data-i18n="好友">好友</span><span class="dot" id="tabDot" hidden></span></button>
+  <button type="button" data-tab="me" data-i18n="我的">我的</button>
+</div></nav>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="wrap">
+    <header class="top"><span class="title" id="sheetTitle" data-i18n="发起活动">发起活动</span><button class="close" id="closeBtn" type="button" data-i18n="取消">取消</button></header>
+    <div class="field"><label for="f-title" data-i18n="做什么？">做什么？</label><div class="chips" id="actChips"></div>
+      <input id="f-title" type="text" maxlength="20" data-i18n-ph="比如：晨间散步" placeholder="比如：晨间散步" autocomplete="off"></div>
+    <div class="field" id="sizeField" hidden><span class="flabel" data-i18n="适合哪些狗狗？">适合哪些狗狗？</span><div class="chips" id="sizeChips" role="group" data-i18n-aria="适合哪些狗狗？" aria-label="适合哪些狗狗？"></div></div>
+    <div class="field"><label for="f-mins" data-i18n="打算多久？">打算多久？</label><div class="chips" id="minChips"></div>
+      <input id="f-mins" type="number" min="10" max="240" step="5" data-i18n-ph="分钟" placeholder="分钟"></div>
+    <div class="field"><label for="f-place" data-i18n="在哪儿？">在哪儿？</label>
+      <input id="f-place" type="text" maxlength="30" data-i18n-ph="比如：公园东门" placeholder="比如：公园东门" autocomplete="off"></div>
+    <div class="field"><label for="f-day" data-i18n="哪天？">哪天？</label><div class="chips" id="dayChips"></div><input id="f-day" type="date"></div>
+    <div class="field"><label for="f-time" data-i18n="几点？">几点？</label><div class="chips" id="timeChips"></div><input id="f-time" type="time"></div>
+    <p class="err" id="err" hidden></p>
+    <button class="submit" id="submitBtn" type="button" data-i18n="发布活动">发布活动</button>
+  </div>
+</div>
+
+<div class="sheet" id="panel" hidden><div class="wrap" id="panelBody"></div></div>
+
+<div class="sheet welcome" id="welcome" hidden style="z-index:31"><div class="wrap" id="welcomeBody"></div></div>
+
+<div class="sheet safety" id="safety" hidden style="z-index:30">
+  <div class="wrap">
+    <header class="top"><span class="title" data-i18n="安全提示">安全提示</span></header>
+    <ul>
+      <li data-i18n="运动有风险，请量力而行。身体不适请立即停下来休息。">运动有风险，请量力而行。身体不适请立即停下来休息。</li>
+      <li data-i18n="有慢性病、近期手术或正在服药，请先咨询医生再参加。">有慢性病、近期手术或正在服药，请先咨询医生再参加。</li>
+      <li data-i18n="活动由发起人和参加者自愿组织、自愿参加，各自评估自身健康状况与风险。">活动由发起人和参加者自愿组织、自愿参加，各自评估自身健康状况与风险。</li>
+      <li data-i18n="FindNet 只提供活动的时间和地点信息，不组织、不带队，也不提供医疗或运动指导。">FindNet 只提供活动的时间和地点信息，不组织、不带队，也不提供医疗或运动指导。</li>
+      <li data-i18n="遇到紧急情况请立即拨打 911。">遇到紧急情况请立即拨打 911。</li>
+    </ul>
+    <button class="submit teal" id="safeOk" type="button" data-i18n="我知道了">我知道了</button>
+  </div>
+</div>
+
+<div class="sheet safety" id="dogSafety" hidden style="z-index:30">
+  <div class="wrap">
+    <header class="top"><span class="title" data-i18n="带狗狗参加之前">带狗狗参加之前</span></header>
+    <ul>
+      <li data-i18n="参加活动的狗狗请先打好疫苗（包括狂犬疫苗）。">参加活动的狗狗请先打好疫苗（包括狂犬疫苗）。</li>
+      <li data-i18n="公共场所请牵绳，遵守公园关于狗狗的规定。">公共场所请牵绳，遵守公园关于狗狗的规定。</li>
+      <li data-i18n="大狗小狗分开玩更安全。狗狗紧张、龇牙、夹尾巴时，请先把它带开。">大狗小狗分开玩更安全。狗狗紧张、龇牙、夹尾巴时，请先把它带开。</li>
+      <li data-i18n="每位主人对自己的狗狗负责，并随身带好拾便袋。">每位主人对自己的狗狗负责，并随身带好拾便袋。</li>
+      <li data-i18n="FindNet 只提供活动的时间和地点信息，不组织活动，也不看管狗狗。">FindNet 只提供活动的时间和地点信息，不组织活动，也不看管狗狗。</li>
+    </ul>
+    <button class="submit teal" id="dogSafeOk" type="button" data-i18n="我知道了">我知道了</button>
+  </div>
+</div>
+
+<div class="sheet" id="setup" hidden style="z-index:30">
+  <div class="wrap">
+    <header class="top"><span class="title" data-i18n="先选一下：谁能看到你？">先选一下：谁能看到你？</span></header>
+    <p class="lead" data-i18n="你报名了哪些活动、有没有点「我到了」，这些叫你的动态。以后随时可以在「我的」里改。">你报名了哪些活动、有没有点「我到了」，这些叫你的动态。以后随时可以在「我的」里改。</p>
+    <div id="setupOpts"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var MONL=["January","February","March","April","May","June","July","August","September","October","November","December"];
+var LANG="hans", LANG_HTML={hans:"zh-Hans",hant:"zh-Hant",en:"en"};
+var I18N_HANS={"rel:好友":"好友","title:活动":"活动"};
+var I18N_HANT={"周日":"週日","周一":"週一","周二":"週二","周三":"週三","周四":"週四","周五":"週五","周六":"週六","一":"一","二":"二","三":"三","四":"四","五":"五","六":"六","日":"日","晨间散步":"晨間散步","散步":"散步","快走":"快走","慢跑":"慢跑","打太极":"打太極","广场舞":"廣場舞","羽毛球":"羽毛球","游泳":"游泳","骑车":"騎車","遛狗":"遛狗","狗狗社交":"狗狗社交","幼犬社交":"幼犬社交","同品种聚会":"同品種聚會","一起训练":"一起訓練","狗公园":"狗公園","大小狗都可以":"大小狗都可以","只限小型犬":"只限小型犬","中大型犬":"中大型犬","小型 · 10公斤（22磅）以下":"小型 · 10公斤（22磅）以下","中型 · 10–25公斤（22–55磅）":"中型 · 10–25公斤（22–55磅）","大型 · 25公斤（55磅）以上":"大型 · 25公斤（55磅）以上","小型犬":"小型犬","中型犬":"中型犬","大型犬":"大型犬","很友好":"很友好","慢热":"慢熱","怕大狗":"怕大狗","还在学规矩":"還在學規矩","柯基":"柯基","泰迪":"泰迪","比熊":"比熊","柴犬":"柴犬","金毛":"金毛","拉布拉多":"拉布拉多","哈士奇":"哈士奇","法斗":"法鬥","串串":"串串","所有人可见":"所有人可見","用 FindNet 的人都能看到你报名了哪些活动、是否已到。最容易被老朋友找到。":"用 FindNet 的人都能看到你報名了哪些活動、是否已到。最容易被老朋友找到。","仅好友可见":"僅好友可見","只有互相关注的好友能看到。内容按人加密，其他人包括被你屏蔽的人都看不到。":"只有互相關注的好友能看到。內容按人加密，其他人包括被你封鎖的人都看不到。","只有自己":"只有自己","谁都看不到你的动态。你自己的次数、分钟和消耗照常记录。":"誰都看不到你的動態。你自己的次數、分鐘和消耗照常記錄。","今天":"今天","明天":"明天","后天":"後天","{m}月{d}日":"{m}月{d}日","{y}年{m}月":"{y}年{m}月","一位朋友":"一位朋友","我":"我","、":"、","{names} 参加":"{names} 參加","{names} 等 {n} 人参加":"{names} 等 {n} 人參加","{n} 人参加":"{n} 人參加"," · {n} 只狗狗":" · {n} 隻狗狗","　{n} 人已到":"　{n} 人已到","{name}（{breed}）的主人":"{name}（{breed}）的主人","{name}的主人":"{name}的主人","{names} 等的主人":"{names} 等的主人","狗狗":"狗狗","疫苗已打":"疫苗已打","疫苗未确认":"疫苗未確認","选择活动类型":"選擇活動型別","长辈走走":"長輩走走","狗狗玩伴":"狗狗玩伴","写一下狗狗的名字吧。":"寫一下狗狗的名字吧。","选一下狗狗的大小，别的主人好判断合不合适。":"選一下狗狗的大小，別的主人好判斷合不合適。","没保存上，请再试一次。":"沒儲存上，請再試一次。","已屏蔽":"已封鎖","rel:好友":"好友","已关注":"已關注","关注了你":"關注了你","活动":"活動","记录":"記錄","好友":"好友","我的":"我的","title:活动":"活動","，运动了":"，運動了","，没运动":"，沒運動","已达标 · ":"已達標 · ","进入本月抽奖":"進入本月抽獎","，月底抽 5 位送小礼物":"，月底抽 5 位送小禮物","本月再参加 ":"本月再參加 ","{n} 次":"{n} 次","，就能进入抽奖 · 抽 5 位送小礼物":"，就能進入抽獎 · 抽 5 位送小禮物","我的运动":"我的運動","{n} 天":"{n} 天","本周运动":"本週運動","本月运动":"本月運動","本月活动次数":"本月活動次數","看日历、分钟和消耗 ›":"看日曆、分鐘和消耗 ›","登录后才能看到记录":"登入後才能看到記錄","登录并报名活动后，这里会显示你每周、每月运动了几天。":"登入並報名活動後，這裡會顯示你每週、每月運動了幾天。","正在读取…":"正在讀取…","马上就好":"馬上就好","本周":"本週","比上周多 {n} 天":"比上週多 {n} 天","和上周一样，保持住":"和上週一樣，保持住","上周 {n} 天":"上週 {n} 天","天运动":"天運動","上个月":"上個月","下个月":"下個月","{date}：这天没有运动记录。":"{date}：這天沒有運動記錄。","{n} 分钟":"{n} 分鐘","点日历上的某一天，看看那天做了什么。":"點日曆上的某一天，看看那天做了什麼。","次活动":"次活動","分钟":"分鐘","千卡 · 估算":"千卡 · 估算","设置体重":"設定體重","还没有运动记录":"還沒有運動記錄","在「活动」里报名，活动当天过后就会记在这里。":"在「活動」裡報名，活動當天過後就會記在這裡。","搜昵称或名字，找到想关注的人":"搜暱稱或名字，找到想關注的人","搜索":"搜尋","没找到。也可以在活动里找到一起运动的人。":"沒找到。也可以在活動裡找到一起運動的人。","狗狗找玩伴":"狗狗找玩伴","附近谁在动":"附近誰在動","＋ 发起活动":"＋ 發起活動","正在看看附近…":"正在看看附近…","还没有狗狗活动":"還沒有狗狗活動","点上面的「发起活动」，约附近的狗狗一起玩。":"點上面的「發起活動」，約附近的狗狗一起玩。","先添加我的狗狗":"先新增我的狗狗","还没有人发起活动":"還沒有人發起活動","点上面的「发起活动」，定个时间地点，大家就能看到并报名了。":"點上面的「發起活動」，定個時間地點，大家就能看到並報名了。","你的狗狗可能不适合":"你的狗狗可能不適合","还没有人报名，第一个来？":"還沒有人報名，第一個來？","看看是谁 ›":"看看是誰 ›","已参加 ✓":"已參加 ✓","参加":"參加","已到 ✓":"已到 ✓","我到了":"我到了","再点一次可以取消":"再點一次可以取消","🔒 你的报名只有好友能看到":"🔒 你的報名只有好友能看到","🔒 你的报名只有你自己能看到":"🔒 你的報名只有你自己能看到","当前为只读访问，无法报名":"當前為只讀訪問，無法報名","登录后就可以报名了":"登入後就可以報名了","删除这个活动":"刪除這個活動","新消息":"新訊息","发消息":"發訊息","回关":"回關","关注":"關注","登录后才能加好友":"登入後才能加好友","登录之后，可以关注一起运动的人，互相关注就是好友。":"登入之後，可以關注一起運動的人，互相關注就是好友。","关注了你 · {n}":"關注了你 · {n}","好友 · {n}":"好友 · {n}","还没有好友":"還沒有好友","在活动卡片上点「看看是谁」，关注一起运动的人。对方也关注你，你们就是好友，可以私聊。":"在活動卡片上點「看看是誰」，關注一起運動的人。對方也關注你，你們就是好友，可以私聊。","我关注的 · 等对方回关":"我關注的 · 等對方回關","这个设备不支持加密，暂时不能选。":"這個裝置不支援加密，暫時不能選。","还没有登录":"還沒有登入","登录之后才能设置。":"登入之後才能設定。","登录账号：{name}":"登入帳號：{name}","已登录":"已登入","修改昵称":"修改暱稱","昵称":"暱稱","保存":"儲存","取消":"取消","谁能看到我的动态":"誰能看到我的動態","动态 = 你报名了哪些活动、有没有点「我到了」":"動態 = 你報名了哪些活動、有沒有點「我到了」","当前为只读访问，不能修改":"當前為只讀訪問，不能修改","我的狗狗 · {n}":"我的狗狗 · {n}","编辑":"編輯","养狗的话，加上狗狗的大小和性格，别的主人更放心。":"養狗的話，加上狗狗的大小和性格，別的主人更放心。","＋ 添加狗狗":"＋ 新增狗狗","体重":"體重","公斤":"公斤","体重（公斤）":"體重（公斤）","只用来估算消耗，存在你自己的空间里，别人看不到。":"只用來估算消耗，存在你自己的空間裡，別人看不到。","屏蔽名单 · {n}":"封鎖名單 · {n}","没有屏蔽任何人。在别人的主页可以屏蔽。":"沒有封鎖任何人。在別人的主頁可以封鎖。","取消屏蔽":"解除封鎖","安全提示":"安全提示","关闭":"關閉","{title} · 参加的人":"{title} · 參加的人","有的人只给好友看，所以这里可能不是全部。":"有的人只給好友看，所以這裡可能不是全部。","编辑狗狗":"編輯狗狗","添加狗狗":"新增狗狗","叫什么名字？":"叫什麼名字？","比如：豆豆":"比如：豆豆","什么品种？":"什麼品種？","不在上面的话，写在这里":"不在上面的話，寫在這裡","多大？":"多大？","性格怎么样？":"性格怎麼樣？","打过疫苗了吗？":"打過疫苗了嗎？","疫苗":"疫苗","已打疫苗":"已打疫苗","没打 / 不清楚":"沒打 / 不清楚","狗狗的资料别的主人能看到，方便判断合不合得来。":"狗狗的資料別的主人能看到，方便判斷合不合得來。","再点一次，确认删除":"再點一次，確認刪除","删除这只狗狗":"刪除這隻狗狗","你们互相关注 · 好友":"你們互相關注 · 好友","你已屏蔽 TA":"你已封鎖 TA","你关注了 TA · 等 TA 回关":"你關注了 TA · 等 TA 回關","TA 关注了你":"TA 關注了你","我的狗狗":"我的狗狗","TA 的狗狗":"TA 的狗狗","取消关注":"取消關注","屏蔽 TA":"封鎖 TA","你现在是「所有人可见」，被屏蔽的人仍然能看到你报名了哪些活动。要真正对 TA 隐藏，请改成「仅好友可见」。":"你現在是「所有人可見」，被封鎖的人仍然能看到你報名了哪些活動。要真正對 TA 隱藏，請改成「僅好友可見」。","改成仅好友可见":"改成僅好友可見","屏蔽后：TA 不再是你的好友，看不到你给好友的动态，发给你的消息你也看不到。":"封鎖後：TA 不再是你的好友，看不到你給好友的動態，發給你的訊息你也看不到。","返回":"返回","🔒 消息已加密，只有你们两个人能看到":"🔒 訊息已加密，只有你們兩個人能看到","对方还没打开过新版 FindNet，暂时发不了消息。等 TA 打开一次就可以了。":"對方還沒開啟過新版 FindNet，暫時發不了訊息。等 TA 開啟一次就可以了。","说点什么…":"說點什麼…","消息":"訊息","发送":"傳送","还没有消息，打个招呼吧。":"還沒有訊息，打個招呼吧。","现在发不了：对方还没打开过新版 FindNet。":"現在發不了：對方還沒開啟過新版 FindNet。","没发出去，请再试一次。":"沒發出去，請再試一次。","发起狗狗活动":"發起狗狗活動","发起长辈活动":"發起長輩活動","发起活动":"發起活動","比如：周末遛狗":"比如：週末遛狗","比如：晨间散步":"比如：晨間散步","比如：狗公园北门":"比如：狗公園北門","比如：公园东门":"比如：公園東門","还差一点：做什么、在哪儿、哪天、几点，都要填上。":"還差一點：做什麼、在哪兒、哪天、幾點，都要填上。","现在连不上，稍后再试。":"現在連不上，稍後再試。","正在发布…":"正在釋出…","你当前的访问权限还不能发起活动。":"你當前的訪問許可權還不能發起活動。","发布没成功，请再试一次。":"釋出沒成功，請再試一次。","发布活动":"釋出活動","有伴才有劲":"有伴才有勁","先登录，才能一起动":"先登入，才能一起動","登录之后可以报名活动、关注好友、私聊。请先登录你的 Claude 账号，再打开这个页面。":"登入之後可以報名活動、關注好友、私聊。請先登入你的 Claude 帳號，再開啟這個頁面。","先随便看看":"先隨便看看","你的账号":"你的帳號","开始使用":"開始使用","这个版本用 Claude 账号登录。正式版会支持微信登录。":"這個版本用 Claude 帳號登入。正式版會支援微信登入。","大家怎么称呼你？":"大家怎麼稱呼你？","会显示在活动和好友列表里。以后可以在「我的」里改。":"會顯示在活動和好友列表裡。以後可以在「我的」裡改。","比如：老王、李阿姨":"比如：老王、李阿姨","下一步":"下一步","写一个称呼吧，比如「老王」。":"寫一個稱呼吧，比如「老王」。","你想在 FindNet 找什么？":"你想在 FindNet 找什麼？","以后在活动页随时可以切换。":"以後在活動頁隨時可以切換。","长辈一起走走":"長輩一起走走","散步、太极、广场舞，认识附近说中文的朋友。":"散步、太極、廣場舞，認識附近說中文的朋友。","遛狗、狗狗社交、同品种聚会，让狗狗也交朋友。":"遛狗、狗狗社交、同品種聚會，讓狗狗也交朋友。","两个都要":"兩個都要","比如：每天带着狗狗出门散步。":"比如：每天帶著狗狗出門散步。","暂时连不上":"暫時連不上","活动列表需要联网才能看到。稍后再打开试试。":"活動列表需要連上網路才能看到。稍後再開啟試試。","语言 · Language":"語言 · Language","做什么？":"做什麼？","适合哪些狗狗？":"適合哪些狗狗？","打算多久？":"打算多久？","在哪儿？":"在哪兒？","哪天？":"哪天？","几点？":"幾點？","运动有风险，请量力而行。身体不适请立即停下来休息。":"運動有風險，請量力而行。身體不適請立即停下來休息。","有慢性病、近期手术或正在服药，请先咨询医生再参加。":"有慢性病、近期手術或正在服藥，請先諮詢醫生再參加。","活动由发起人和参加者自愿组织、自愿参加，各自评估自身健康状况与风险。":"活動由發起人和參加者自願組織、自願參加，各自評估自身健康狀況與風險。","FindNet 只提供活动的时间和地点信息，不组织、不带队，也不提供医疗或运动指导。":"FindNet 只提供活動的時間和地點資訊，不組織、不帶隊，也不提供醫療或運動指導。","遇到紧急情况请立即拨打 911。":"遇到緊急情況請立即撥打 911。","我知道了":"我知道了","带狗狗参加之前":"帶狗狗參加之前","参加活动的狗狗请先打好疫苗（包括狂犬疫苗）。":"參加活動的狗狗請先打好疫苗（包括狂犬疫苗）。","公共场所请牵绳，遵守公园关于狗狗的规定。":"公共場所請牽繩，遵守公園關於狗狗的規定。","大狗小狗分开玩更安全。狗狗紧张、龇牙、夹尾巴时，请先把它带开。":"大狗小狗分開玩更安全。狗狗緊張、齜牙、夾尾巴時，請先把它帶開。","每位主人对自己的狗狗负责，并随身带好拾便袋。":"每位主人對自己的狗狗負責，並隨身帶好拾便袋。","FindNet 只提供活动的时间和地点信息，不组织活动，也不看管狗狗。":"FindNet 只提供活動的時間和地點資訊，不組織活動，也不看管狗狗。","先选一下：谁能看到你？":"先選一下：誰能看到你？","你报名了哪些活动、有没有点「我到了」，这些叫你的动态。以后随时可以在「我的」里改。":"你報名了哪些活動、有沒有點「我到了」，這些叫你的動態。以後隨時可以在「我的」裡改。","主菜单":"主選單"};
+var I18N_EN={"周日":"Sun","周一":"Mon","周二":"Tue","周三":"Wed","周四":"Thu","周五":"Fri","周六":"Sat","一":"Mon","二":"Tue","三":"Wed","四":"Thu","五":"Fri","六":"Sat","日":"Sun","晨间散步":"Morning walk","散步":"Walk","快走":"Brisk walk","慢跑":"Jogging","打太极":"Tai chi","广场舞":"Square dancing","羽毛球":"Badminton","游泳":"Swimming","骑车":"Cycling","遛狗":"Dog walk","狗狗社交":"Dog playdate","幼犬社交":"Puppy social","同品种聚会":"Breed meetup","一起训练":"Training together","狗公园":"Dog park","大小狗都可以":"All sizes welcome","只限小型犬":"Small dogs only","中大型犬":"Medium & large dogs","小型 · 10公斤（22磅）以下":"Small · under 10 kg (22 lb)","中型 · 10–25公斤（22–55磅）":"Medium · 10–25 kg (22–55 lb)","大型 · 25公斤（55磅）以上":"Large · over 25 kg (55 lb)","小型犬":"Small dog","中型犬":"Medium dog","大型犬":"Large dog","很友好":"Friendly","慢热":"Shy at first","怕大狗":"Nervous around big dogs","还在学规矩":"Still in training","柯基":"Corgi","泰迪":"Toy poodle","比熊":"Bichon","柴犬":"Shiba Inu","金毛":"Golden retriever","拉布拉多":"Labrador","哈士奇":"Husky","法斗":"French bulldog","串串":"Mixed breed","所有人可见":"Everyone","用 FindNet 的人都能看到你报名了哪些活动、是否已到。最容易被老朋友找到。":"Anyone using FindNet can see which activities you've joined and whether you've arrived. The easiest way for old friends to find you.","仅好友可见":"Friends only","只有互相关注的好友能看到。内容按人加密，其他人包括被你屏蔽的人都看不到。":"Only friends who follow you back can see it. It's encrypted separately for each friend, so nobody else can read it, including people you've blocked.","只有自己":"Only me","谁都看不到你的动态。你自己的次数、分钟和消耗照常记录。":"Nobody can see your activity. Your own counts, minutes and calories are still recorded.","今天":"Today","明天":"Tomorrow","后天":"In 2 days","{m}月{d}日":function(p){return MON[p.m-1]+' '+p.d;},"{y}年{m}月":function(p){return MONL[p.m-1]+' '+p.y;},"一位朋友":"A friend","我":"You","、":", ","{names} 参加":function(p){return p.names+(p.c>1||p.you?' are going':' is going');},"{names} 等 {n} 人参加":function(p){return p.names+' and '+p.k+' more going';},"{n} 人参加":function(p){return p.n===1?'1 person going':p.n+' people going';}," · {n} 只狗狗":function(p){return ' · '+(p.n===1?'1 dog':p.n+' dogs');},"　{n} 人已到":function(p){return ' · '+p.n+' here';},"{name}（{breed}）的主人":"Owner of {name} ({breed})","{name}的主人":"Owner of {name}","{names} 等的主人":"Owner of {names} and more","狗狗":"Dog","疫苗已打":"Vaccinated","疫苗未确认":"Vaccination unconfirmed","选择活动类型":"Choose activity type","长辈走走":"Group walks","狗狗玩伴":"Dog meetups","写一下狗狗的名字吧。":"Please add your dog's name.","选一下狗狗的大小，别的主人好判断合不合适。":"Please choose a size so other owners can tell if your dogs will get along.","没保存上，请再试一次。":"Couldn't save. Please try again.","已屏蔽":"Blocked","rel:好友":"Friend","已关注":"Following","关注了你":"Follows you","活动":"Events","记录":"Progress","好友":"Friends","我的":"Me","title:活动":"Activity","，运动了":", active","，没运动":", no activity","已达标 · ":"Goal reached · ","进入本月抽奖":"you're in this month's draw","，月底抽 5 位送小礼物":". 5 winners get a small gift at month end.","本月再参加 ":"Join ","{n} 次":function(p){return p.n===1?'1 more activity':p.n+' more activities';},"，就能进入抽奖 · 抽 5 位送小礼物":" this month to enter the draw · 5 winners get a small gift","我的运动":"My activity","{n} 天":function(p){return p.n===1?'1 day':p.n+' days';},"本周运动":"This week","本月运动":"This month","本月活动次数":"Activities this month","看日历、分钟和消耗 ›":"See calendar, minutes & calories ›","登录后才能看到记录":"Sign in to see your progress","登录并报名活动后，这里会显示你每周、每月运动了几天。":"Once you sign in and join activities, you'll see how many days you were active each week and month.","正在读取…":"Loading…","马上就好":"Just a moment","本周":"This week","比上周多 {n} 天":function(p){return p.n===1?'1 more day than last week':p.n+' more days than last week';},"和上周一样，保持住":"Same as last week. Keep it up!","上周 {n} 天":function(p){return 'Last week: '+(p.n===1?'1 day':p.n+' days');},"天运动":"active days","上个月":"Previous month","下个月":"Next month","{date}：这天没有运动记录。":"{date}: no activity recorded.","{n} 分钟":"{n} min","点日历上的某一天，看看那天做了什么。":"Tap a day on the calendar to see what you did.","次活动":"activities","分钟":"minutes","千卡 · 估算":"kcal · estimate","设置体重":"Set weight","还没有运动记录":"No activity yet","在「活动」里报名，活动当天过后就会记在这里。":"Join something under Events. It's recorded here once the day arrives.","搜昵称或名字，找到想关注的人":"Search by nickname or name","搜索":"Search","没找到。也可以在活动里找到一起运动的人。":"No one found. You can also find people through activities.","狗狗找玩伴":"Find dog friends","附近谁在动":"Who's out nearby","＋ 发起活动":"+ Create activity","正在看看附近…":"Looking nearby…","还没有狗狗活动":"No dog meetups yet","点上面的「发起活动」，约附近的狗狗一起玩。":"Tap Create activity above to invite dogs nearby to play.","先添加我的狗狗":"Add my dog first","还没有人发起活动":"No activities yet","点上面的「发起活动」，定个时间地点，大家就能看到并报名了。":"Tap Create activity above, pick a time and place, and others can see it and join.","你的狗狗可能不适合":"May not suit your dog","还没有人报名，第一个来？":"No one yet. Be the first?","看看是谁 ›":"See who ›","已参加 ✓":"Going ✓","参加":"Join","已到 ✓":"Here ✓","我到了":"I'm here","再点一次可以取消":"Tap again to cancel","🔒 你的报名只有好友能看到":"🔒 Only your friends can see you're going","🔒 你的报名只有你自己能看到":"🔒 Only you can see you're going","当前为只读访问，无法报名":"View-only access: you can't join","登录后就可以报名了":"Sign in to join","删除这个活动":"Delete this activity","新消息":"New message","发消息":"Message","回关":"Follow back","关注":"Follow","登录后才能加好友":"Sign in to add friends","登录之后，可以关注一起运动的人，互相关注就是好友。":"Once signed in, you can follow people you exercise with. When you follow each other, you're friends.","关注了你 · {n}":"Follow you · {n}","好友 · {n}":"Friends · {n}","还没有好友":"No friends yet","在活动卡片上点「看看是谁」，关注一起运动的人。对方也关注你，你们就是好友，可以私聊。":"Tap See who on an activity card and follow people you exercise with. When they follow you back, you're friends and can message each other.","我关注的 · 等对方回关":"Following · waiting for them to follow back","这个设备不支持加密，暂时不能选。":"This device doesn't support encryption, so this option isn't available.","还没有登录":"Not signed in","登录之后才能设置。":"Sign in to change settings.","登录账号：{name}":"Signed in as {name}","已登录":"Signed in","修改昵称":"Change nickname","昵称":"Nickname","保存":"Save","取消":"Cancel","谁能看到我的动态":"Who can see my activity","动态 = 你报名了哪些活动、有没有点「我到了」":"Activity = which events you've joined, and whether you tapped I'm here","当前为只读访问，不能修改":"View-only access: can't change this","我的狗狗 · {n}":"My dogs · {n}","编辑":"Edit","养狗的话，加上狗狗的大小和性格，别的主人更放心。":"If you have a dog, add its size and temperament so other owners feel at ease.","＋ 添加狗狗":"+ Add a dog","体重":"Weight","公斤":"kg","体重（公斤）":"Weight (kg)","只用来估算消耗，存在你自己的空间里，别人看不到。":"Only used to estimate calories. Stored privately; no one else can see it.","屏蔽名单 · {n}":"Blocked · {n}","没有屏蔽任何人。在别人的主页可以屏蔽。":"You haven't blocked anyone. You can block someone from their profile.","取消屏蔽":"Unblock","安全提示":"Safety notice","关闭":"Close","{title} · 参加的人":"{title} · Who's going","有的人只给好友看，所以这里可能不是全部。":"Some people only share with friends, so this list may not be complete.","编辑狗狗":"Edit dog","添加狗狗":"Add a dog","叫什么名字？":"What's its name?","比如：豆豆":"e.g. Lucky","什么品种？":"What breed?","不在上面的话，写在这里":"Not listed? Type it here","多大？":"How big?","性格怎么样？":"Temperament?","打过疫苗了吗？":"Vaccinated?","疫苗":"Vaccination","已打疫苗":"Vaccinated","没打 / 不清楚":"Not yet / not sure","狗狗的资料别的主人能看到，方便判断合不合得来。":"Other owners can see your dog's profile, so they can tell if the dogs will get along.","再点一次，确认删除":"Tap again to delete","删除这只狗狗":"Delete this dog","你们互相关注 · 好友":"You follow each other · Friends","你已屏蔽 TA":"You blocked them","你关注了 TA · 等 TA 回关":"You follow them · waiting for them to follow back","TA 关注了你":"They follow you","我的狗狗":"My dogs","TA 的狗狗":"Their dogs","取消关注":"Unfollow","屏蔽 TA":"Block","你现在是「所有人可见」，被屏蔽的人仍然能看到你报名了哪些活动。要真正对 TA 隐藏，请改成「仅好友可见」。":"Your activity is set to Everyone, so blocked people can still see which activities you've joined. To really hide it from them, switch to Friends only.","改成仅好友可见":"Switch to Friends only","屏蔽后：TA 不再是你的好友，看不到你给好友的动态，发给你的消息你也看不到。":"Once blocked, they're no longer your friend, can't see what you share with friends, and you won't see their messages.","返回":"Back","🔒 消息已加密，只有你们两个人能看到":"🔒 Messages are encrypted. Only the two of you can read them.","对方还没打开过新版 FindNet，暂时发不了消息。等 TA 打开一次就可以了。":"They haven't opened the new FindNet yet, so you can't message them. Once they open it, you can.","说点什么…":"Say something…","消息":"Message","发送":"Send","还没有消息，打个招呼吧。":"No messages yet. Say hello!","现在发不了：对方还没打开过新版 FindNet。":"Can't send yet: they haven't opened the new FindNet.","没发出去，请再试一次。":"Didn't send. Please try again.","发起狗狗活动":"Create a dog meetup","发起长辈活动":"Create an activity","发起活动":"Create activity","比如：周末遛狗":"e.g. Weekend dog walk","比如：晨间散步":"e.g. Morning walk","比如：狗公园北门":"e.g. Dog park, north gate","比如：公园东门":"e.g. Park, east gate","还差一点：做什么、在哪儿、哪天、几点，都要填上。":"Almost there: please fill in what, where, which day and what time.","现在连不上，稍后再试。":"Can't connect right now. Please try again later.","正在发布…":"Posting…","你当前的访问权限还不能发起活动。":"Your access level doesn't allow creating activities.","发布没成功，请再试一次。":"Couldn't post. Please try again.","发布活动":"Post activity","有伴才有劲":"Better together","先登录，才能一起动":"Sign in to join in","登录之后可以报名活动、关注好友、私聊。请先登录你的 Claude 账号，再打开这个页面。":"Once signed in, you can join activities, follow friends and send messages. Please sign in to your Claude account, then open this page again.","先随便看看":"Just look around","你的账号":"Your account","开始使用":"Get started","这个版本用 Claude 账号登录。正式版会支持微信登录。":"This version uses your Claude account. The full version will support WeChat sign-in.","大家怎么称呼你？":"What should people call you?","会显示在活动和好友列表里。以后可以在「我的」里改。":"Shown on activities and friend lists. You can change it later under Me.","比如：老王、李阿姨":"e.g. Lao Wang, Auntie Li","下一步":"Next","写一个称呼吧，比如「老王」。":"Please enter a name, like Lao Wang.","你想在 FindNet 找什么？":"What are you looking for on FindNet?","以后在活动页随时可以切换。":"You can switch anytime on the Events page.","长辈一起走走":"Walk together","散步、太极、广场舞，认识附近说中文的朋友。":"Walks, tai chi, square dancing. Meet Chinese-speaking friends nearby.","遛狗、狗狗社交、同品种聚会，让狗狗也交朋友。":"Dog walks, playdates, breed meetups. Your dog makes friends too.","两个都要":"Both","比如：每天带着狗狗出门散步。":"For example, a daily walk with your dog.","暂时连不上":"Can't connect","活动列表需要联网才能看到。稍后再打开试试。":"The activity list needs an internet connection. Try again later.","语言 · Language":"Language","做什么？":"What?","适合哪些狗狗？":"Which dogs can come?","打算多久？":"How long?","在哪儿？":"Where?","哪天？":"Which day?","几点？":"What time?","运动有风险，请量力而行。身体不适请立即停下来休息。":"Exercise carries risks. Go at your own pace, and stop to rest right away if you feel unwell.","有慢性病、近期手术或正在服药，请先咨询医生再参加。":"If you have a chronic condition, recent surgery or take medication, check with your doctor first.","活动由发起人和参加者自愿组织、自愿参加，各自评估自身健康状况与风险。":"Activities are organized and joined voluntarily. Each person judges their own health and risk.","FindNet 只提供活动的时间和地点信息，不组织、不带队，也不提供医疗或运动指导。":"FindNet only shares when and where activities happen. It doesn't organize or lead them, and doesn't give medical or exercise advice.","遇到紧急情况请立即拨打 911。":"In an emergency, call 911 right away.","我知道了":"Got it","带狗狗参加之前":"Before bringing your dog","参加活动的狗狗请先打好疫苗（包括狂犬疫苗）。":"Dogs should be fully vaccinated, including rabies.","公共场所请牵绳，遵守公园关于狗狗的规定。":"Keep dogs leashed in public places and follow the park's dog rules.","大狗小狗分开玩更安全。狗狗紧张、龇牙、夹尾巴时，请先把它带开。":"Big and small dogs are safer playing apart. If a dog is tense, bares its teeth or tucks its tail, lead it away.","每位主人对自己的狗狗负责，并随身带好拾便袋。":"Each owner is responsible for their own dog. Bring poop bags.","FindNet 只提供活动的时间和地点信息，不组织活动，也不看管狗狗。":"FindNet only shares when and where activities happen. It doesn't organize them or supervise dogs.","先选一下：谁能看到你？":"First, who can see you?","你报名了哪些活动、有没有点「我到了」，这些叫你的动态。以后随时可以在「我的」里改。":"Which activities you've joined and whether you tapped I'm here make up your activity. You can change this anytime under Me.","主菜单":"Main menu"};
+function T(k,p){
+  var d=LANG==="en"?I18N_EN:(LANG==="hant"?I18N_HANT:I18N_HANS);
+  var v=d[k]; if(v===undefined) v=I18N_HANS[k]; if(v===undefined) v=k;
+  if(typeof v==="function") return v(p||{});
+  if(p) v=String(v).replace(/\{(\w+)\}/g,function(_,n){ return p[n]!==undefined?p[n]:""; });
+  return v;
+}
+function detectLang(){
+  var a=(navigator.languages&&navigator.languages.length)?navigator.languages:[navigator.language||""];
+  for(var i=0;i<a.length;i++){ var x=String(a[i]).toLowerCase();
+    if(x.indexOf("zh")===0) return /hant|-tw|-hk|-mo/.test(x)?"hant":"hans";
+    if(x.indexOf("en")===0) return "en"; }
+  return "hans";
+}
+var LS_LANG=null; try{ LS_LANG=localStorage.getItem("fn_lang"); }catch(e){}
+LANG=(LS_LANG&&LANG_HTML[LS_LANG])?LS_LANG:detectLang();
+document.documentElement.lang=LANG_HTML[LANG];
+function SEP(){ return LANG==="en"?" · ":"　"; }
+function applyStatic(){
+  document.querySelectorAll("[data-i18n]").forEach(function(x){ x.textContent=T(x.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(function(x){ x.placeholder=T(x.getAttribute("data-i18n-ph")); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(function(x){ x.setAttribute("aria-label",T(x.getAttribute("data-i18n-aria"))); });
+}
+
+var DB=null, USER=null, ME=null, MEID=null, readonly=false;
+var acts=[], going={}, follows={}, pubKeys={}, sharesRaw={}, friendView={};
+var myState={acts:{},here:{}}, settings={mode:null,blocks:{}}, weight=null, settingsLoaded=false;
+var KP=null, cryptoOK=!!(window.crypto&&window.crypto.subtle&&window.TextEncoder);
+var aesCache={}, decCache={};
+var loaded=false, readyGoing=false, tab="act", busy={};
+var inboxSubs={}, inboxDocs={}, outDocs={}, chatWith=null, chatOutSub=null;
+var panelMode=null, panelArg=null, lastRead={}, logMonth=null, selDay=null;
+var nicks={}, myNick=null, nickLoaded=false, bootDone=false, editNick=false, welcomeStep=null;
+var viewSide="people", dogsBy={}, dogDraft=null, createSide="people", lastCreateSide=null, newSize="any";
+var WD=["周日","周一","周二","周三","周四","周五","周六"], GOAL=8;
+var MET={"晨间散步":3.0,"散步":3.0,"快走":4.3,"慢跑":7.0,"打太极":3.0,"广场舞":5.0,"羽毛球":5.5,"游泳":6.0,"骑车":6.8,
+         "遛狗":3.0,"狗狗社交":2.5,"幼犬社交":2.5,"同品种聚会":2.5,"一起训练":3.0,"狗公园":2.5};
+var ACTS_D=["遛狗","狗狗社交","幼犬社交","同品种聚会","一起训练","狗公园"];
+var SIZES={any:"大小狗都可以",small:"只限小型犬",big:"中大型犬"};
+var DOGSIZE={s:"小型 · 10公斤（22磅）以下",m:"中型 · 10–25公斤（22–55磅）",l:"大型 · 25公斤（55磅）以上"};
+var DOGSIZE_SHORT={s:"小型犬",m:"中型犬",l:"大型犬"};
+var TEMPER={friendly:"很友好",slow:"慢热",nobig:"怕大狗",training:"还在学规矩"};
+var BREEDS=["柯基","泰迪","比熊","柴犬","金毛","拉布拉多","哈士奇","法斗","串串"];
+var SVG_PAW='<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="16.2" rx="5" ry="4.2"/><circle cx="5.8" cy="10.6" r="2.1"/><circle cx="9.5" cy="6.6" r="2.1"/><circle cx="14.5" cy="6.6" r="2.1"/><circle cx="18.2" cy="10.6" r="2.1"/></svg>';
+var SVG_PEOPLE='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="7" r="3"/><circle cx="16.2" cy="8" r="2.6"/><path d="M2.5 20c0-3.6 2.7-6.2 6-6.2s6 2.6 6 6.2z"/><path d="M14 20c.1-2.2-.6-4.1-1.9-5.4.9-.6 2-.9 3.1-.9 3 0 5.3 2.4 5.3 5.6V20z"/></svg>';
+var ACTS=["晨间散步","快走","慢跑","打太极","广场舞","羽毛球","游泳","骑车"];
+var TIMES=["06:30","07:00","08:00","09:00","15:30","18:30","19:00"], MINS=[30,45,60,90];
+var BLANK="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+var MODES=[
+  ["all","所有人可见","用 FindNet 的人都能看到你报名了哪些活动、是否已到。最容易被老朋友找到。"],
+  ["friends","仅好友可见","只有互相关注的好友能看到。内容按人加密，其他人包括被你屏蔽的人都看不到。"],
+  ["hidden","只有自己","谁都看不到你的动态。你自己的次数、分钟和消耗照常记录。"]
+];
+var DAYK=["今天","明天","后天"];
+var WDMON=["周一","周二","周三","周四","周五","周六","周日"];
+var LANGS=[["hans","简体中文","zh-Hans"],["hant","繁體中文","zh-Hant"],["en","English","en"]];
+var LANG_ARIA="Language / 语言 / 語言";
+
+function $(id){ return document.getElementById(id); }
+var TITLE_KEYS=null;
+function titleKeys(){ return TITLE_KEYS||(TITLE_KEYS=Object.keys(MET)); }
+function enEq(a,b){ return typeof b==="string"&&a.toLowerCase()===b.toLowerCase(); }
+function canonFrom(list,v){ if(!v) return ""; v=String(v).trim(); for(var i=0;i<list.length;i++){ var k=list[i]; if(v===k||v===I18N_HANT[k]||enEq(v,I18N_EN[k])) return k; } return v; }
+function canonTitle(v){ return canonFrom(titleKeys(),v); }
+function dispTitle(t){ var c=canonTitle(t); return titleKeys().indexOf(c)>=0?T(c):(t||""); }
+function canonBreed(v){ return canonFrom(BREEDS,v); }
+function dispBreed(b){ var c=canonBreed(b); return BREEDS.indexOf(c)>=0?T(c):(b||""); }
+function langRow(wide){
+  var g=el("div","langs"+(wide?" wide":"")); g.setAttribute("role","group"); g.setAttribute("aria-label",LANG_ARIA);
+  LANGS.forEach(function(l){ var b=btn(null,l[1],function(){ setLang(l[0]); }); b.setAttribute("aria-pressed",LANG===l[0]?"true":"false"); b.setAttribute("lang",l[2]); g.appendChild(b); });
+  return g;
+}
+function setLang(l,save){
+  if(!LANG_HTML[l]) l="hans";
+  LANG=l; try{ localStorage.setItem("fn_lang",l); }catch(e){}
+  document.documentElement.lang=LANG_HTML[l];
+  applyStatic();
+  if(!$("sheet").hidden){ $("f-title").value=dispTitle($("f-title").value); fillChips(); }
+  if(!$("welcome").hidden&&welcomeStep) showWelcome(welcomeStep);
+  if(!$("setup").hidden){ var box=$("setupOpts"); box.textContent=""; modeOptions(box,setupPick); }
+  buildTab(); render();
+  if(panelMode==="chat"&&chatWith) openChat(chatWith); else if(panelMode) renderPanel();
+  if(save!==false&&MEID&&!readonly&&settingsLoaded&&settings.lang!==l) saveSettings({lang:l});
+}
+
+function pad(n){ return (n<10?"0":"")+n; }
+function dstr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function addDays(n){ var d=new Date(); d.setDate(d.getDate()+n); return d; }
+function today(){ return dstr(new Date()); }
+function metOf(t){ if(MET[t]) return MET[t]; for(var k in MET){ if(t.indexOf(k)>=0) return MET[k]; } return 3.5; }
+function mdLabel(m,d){ return T("{m}月{d}日",{m:m,d:d}); }
+function dayKey(s){ var i=[today(),dstr(addDays(1)),dstr(addDays(2))].indexOf(s); return i>=0?DAYK[i]:""; }
+function dayLabel(s){ var k=dayKey(s); if(k) return T(k); var p=s.split("-"); return mdLabel(Number(p[1]),Number(p[2])); }
+function dayNote(s){ var p=s.split("-"); return T(WD[new Date(Number(p[0]),Number(p[1])-1,Number(p[2])).getDay()]); }
+function fmtT(iso){ var d=new Date(iso); if(isNaN(d)) return ""; var s=pad(d.getHours())+":"+pad(d.getMinutes()); if(dstr(d)!==today()) s=mdLabel(d.getMonth()+1,d.getDate())+" "+s; return s; }
+function el(tag,cls,txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function btn(cls,txt,fn){ var b=el("button",cls,txt); b.type="button"; if(fn) b.addEventListener("click",fn); return b; }
+function stateBox(h,p){ var d=el("div","state"); d.appendChild(el("h3",null,h)); d.appendChild(el("p",null,p)); return d; }
+function hasAny(o){ for(var k in (o||{})) if(o[k]) return true; return false; }
+function canRebuild(c){ var a=document.activeElement; return !(a&&(a.tagName==="INPUT")&&c&&c.contains(a)); }
+function avatar(u){ var i=document.createElement("img"); i.alt=""; i.src=BLANK; i.setAttribute("data-pimg",u); return i; }
+function nameSpan(u,fb){ var s=el("span",null,fb||"…"); s.setAttribute("data-pname",u); return s; }
+try{ lastRead=JSON.parse(localStorage.getItem("fn_read_v1")||"{}")||{}; }catch(e){ lastRead={}; }
+function saveRead(){ try{ localStorage.setItem("fn_read_v1",JSON.stringify(lastRead)); }catch(e){} }
+
+/* ---------- writes: one at a time per document ---------- */
+var chains={};
+function writeDoc(path,body){
+  var prev=chains[path]||Promise.resolve();
+  var p=prev.then(function(){ return DB.doc(path).set(body); });
+  chains[path]=p.catch(function(){});
+  return p;
+}
+
+/* ---------- people resolution ---------- */
+function nameOf(u,ps){ if(nicks[u]) return nicks[u]; var p=ps&&ps[u]; return (p&&p.name)||""; }
+function fillPeople(root){
+  if(!root) return;
+  var ids={}, n=root.querySelectorAll("[data-pname],[data-pimg],[data-names]"), i;
+  for(i=0;i<n.length;i++){
+    var a=n[i].getAttribute("data-pname")||n[i].getAttribute("data-pimg"); if(a) ids[a]=1;
+    var c=n[i].getAttribute("data-names"); if(c) c.split(",").forEach(function(u){ if(u) ids[u]=1; });
+  }
+  var list=Object.keys(ids); if(!list.length) return;
+  function apply(ps){
+    root.querySelectorAll("[data-pname]").forEach(function(x){ var nm=nameOf(x.getAttribute("data-pname"),ps); if(nm||ps) x.textContent=nm||T("一位朋友"); });
+    if(ps) root.querySelectorAll("[data-pimg]").forEach(function(x){ var p=ps[x.getAttribute("data-pimg")]; if(p&&p.avatarUrl) x.src=p.avatarUrl; });
+    root.querySelectorAll("[data-names]").forEach(function(x){
+      var us=(x.getAttribute("data-names")||"").split(",").filter(Boolean), nm=[];
+      var you=false;
+      for(var k=0;k<us.length&&nm.length<2;k++){ var q=us[k]===MEID?T("我"):nameOf(us[k],ps); if(us[k]===MEID) you=true; if(q) nm.push(q); }
+      if(!nm.length) return;
+      var nj=nm.join(T("、"));
+      x.textContent=(us.length>nm.length?T("{names} 等 {n} 人参加",{names:nj,n:us.length,k:us.length-nm.length}):T("{names} 参加",{names:nj,c:nm.length,you:you&&nm.length===1}))+(x.getAttribute("data-suffix")||"");
+    });
+  }
+  apply(null);
+  if(USER) USER.profiles(list).then(apply);
+}
+
+/* ---------- dogs ---------- */
+function dogsOf(u){ return dogsBy[u]||[]; }
+function fits(ds,as){ if(as==="small") return ds==="s"; if(as==="big") return ds==="m"||ds==="l"; return true; }
+function dogOwnerLine(u){
+  var ds=dogsOf(u); if(!ds.length) return "";
+  if(ds.length===1) return ds[0].breed?T("{name}（{breed}）的主人",{name:ds[0].name,breed:dispBreed(ds[0].breed)}):T("{name}的主人",{name:ds[0].name});
+  var nj=ds.slice(0,2).map(function(d){ return d.name; }).join(T("、"));
+  return ds.length>2?T("{names} 等的主人",{names:nj}):T("{name}的主人",{name:nj});
+}
+function dogCard(d,action){
+  var r=el("div","row"), ic=el("span","dogic"); ic.innerHTML=SVG_PAW; ic.setAttribute("aria-hidden","true"); r.appendChild(ic);
+  var nm=el("div","nm"); nm.appendChild(el("span",null,d.name||T("狗狗")));
+  nm.appendChild(el("small",null,[dispBreed(d.breed),T(DOGSIZE_SHORT[d.size]||""),T(TEMPER[d.temper]||""),d.vax?T("疫苗已打"):T("疫苗未确认")].filter(Boolean).join(" · ")));
+  r.appendChild(nm); if(action) r.appendChild(action); return r;
+}
+function segControl(){
+  var g=el("div","seg"); g.setAttribute("role","group"); g.setAttribute("aria-label",T("选择活动类型"));
+  [["people",T("长辈走走"),SVG_PEOPLE],["dogs",T("狗狗玩伴"),SVG_PAW]].forEach(function(o){
+    var b=btn(null,null,function(){ setViewSide(o[0]); });
+    b.setAttribute("aria-pressed",viewSide===o[0]?"true":"false");
+    var ic=el("span"); ic.innerHTML=o[2]; ic.setAttribute("aria-hidden","true");
+    b.appendChild(ic); b.appendChild(el("span",null,o[1])); g.appendChild(b);
+  });
+  return g;
+}
+function dogSafeSeen(){ try{ return localStorage.getItem("fn_dogsafe_v1")==="1"; }catch(e){ return false; } }
+function setViewSide(x){
+  viewSide=x; try{ localStorage.setItem("fn_side",x); }catch(e){}
+  if(x==="dogs"&&!dogSafeSeen()) $("dogSafety").hidden=false;
+  render(); window.scrollTo(0,0);
+}
+function openDogEditor(i){
+  var cur=(i>=0&&dogsOf(MEID)[i])||{};
+  dogDraft={idx:i,name:cur.name||"",breed:cur.breed||"",size:cur.size||"",temper:cur.temper||"",vax:(typeof cur.vax==="boolean")?cur.vax:null,err:"",confirmDel:false};
+  closeChatSub(); chatWith=null; panelMode="dog"; panelArg=i; $("panel").hidden=false; $("panel").scrollTop=0; renderPanel();
+}
+async function saveDog(){
+  var D=dogDraft; if(!D) return;
+  var name=cleanNick(D.name);
+  if(!name){ D.err=T("写一下狗狗的名字吧。"); renderPanel(); return; }
+  if(!D.size){ D.err=T("选一下狗狗的大小，别的主人好判断合不合适。"); renderPanel(); return; }
+  var dog={name:name,breed:canonBreed(cleanNick(D.breed)),size:D.size,temper:D.temper||"",vax:D.vax===true};
+  var list=dogsOf(MEID).slice(); if(D.idx>=0) list[D.idx]=dog; else list.push(dog); list=list.slice(0,3);
+  try{ await writeDoc("dogs/"+MEID,{list:list}); }catch(e){ D.err=T("没保存上，请再试一次。"); renderPanel(); return; }
+  dogsBy[MEID]=list; closePanel();
+}
+async function deleteDog(i){
+  var list=dogsOf(MEID).slice(); list.splice(i,1);
+  try{ await writeDoc("dogs/"+MEID,{list:list}); dogsBy[MEID]=list; }catch(e){}
+  closePanel();
+}
+
+/* ---------- social graph ---------- */
+function blocked(u){ return !!(settings.blocks&&settings.blocks[u]); }
+function iFollow(u){ var f=follows[MEID]; return !!(f&&f.list&&f.list[u]); }
+function followsMe(u){ var f=follows[u]; return !!(f&&f.list&&f.list[MEID]); }
+function isFriend(u){ return !!MEID&&u!==MEID&&iFollow(u)&&followsMe(u)&&!blocked(u); }
+function friendIds(){ var o=[]; for(var u in follows) if(isFriend(u)) o.push(u); return o.sort(); }
+function followerIds(){ var o=[]; for(var u in follows) if(u!==MEID&&followsMe(u)&&!iFollow(u)&&!blocked(u)) o.push(u); return o.sort(); }
+function followingIds(){ var o=[], f=follows[MEID]; if(f&&f.list) for(var u in f.list) if(f.list[u]&&u!==MEID&&!followsMe(u)&&!blocked(u)) o.push(u); return o.sort(); }
+function relLabel(u){ if(u===MEID) return T("我"); if(blocked(u)) return T("已屏蔽"); if(isFriend(u)) return T("rel:好友"); if(iFollow(u)) return T("已关注"); if(followsMe(u)) return T("关注了你"); return ""; }
+
+/* ---------- who sees what ---------- */
+function statusOf(u){
+  if(u===MEID) return myState;
+  if(blocked(u)) return null;
+  var g=going[u]; if(g&&hasAny(g.acts)) return g;
+  return friendView[u]||null;
+}
+function allUids(){ var s={},k; for(k in going) s[k]=1; for(k in friendView) s[k]=1; if(MEID) s[MEID]=1; return Object.keys(s); }
+function goersOf(id){ return allUids().filter(function(u){ var s=statusOf(u); return s&&s.acts&&s.acts[id]; }).sort(); }
+function hereOf(id){ return allUids().filter(function(u){ var s=statusOf(u); return s&&s.acts&&s.acts[id]&&s.here&&s.here[id]; }).length; }
+function pubActs(o){ var r={}; Object.keys(o||{}).filter(function(x){ return o[x]; }).sort().forEach(function(x){ r[x]=true; }); return r; }
+function canon(s){ var h={}, o=(s&&s.here)||{}; Object.keys(o).filter(function(x){ return o[x]; }).sort().forEach(function(x){ h[x]=o[x]; }); return JSON.stringify({acts:pubActs(s&&s.acts),here:h}); }
+
+/* ---------- crypto: ECDH P-256 per pair -> AES-GCM ---------- */
+function b64(buf){ var s="",b=new Uint8Array(buf); for(var i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function unb64(s){ var r=atob(s),b=new Uint8Array(r.length); for(var i=0;i<r.length;i++) b[i]=r.charCodeAt(i); return b; }
+async function ensureKeys(){
+  if(!cryptoOK||!DB||!MEID||readonly) return;
+  try{
+    var ref=DB.doc("data/users/"+MEID+"/keys"), snap=await ref.get(), d=snap.exists?snap.data():null;
+    if(d&&d.priv&&d.pub&&d.priv.d){
+      KP={priv:await crypto.subtle.importKey("jwk",{kty:"EC",crv:"P-256",x:d.priv.x,y:d.priv.y,d:d.priv.d},{name:"ECDH",namedCurve:"P-256"},false,["deriveKey"]),pub:d.pub};
+    }else{
+      var kp=await crypto.subtle.generateKey({name:"ECDH",namedCurve:"P-256"},true,["deriveKey"]);
+      var pj=await crypto.subtle.exportKey("jwk",kp.privateKey), uj=await crypto.subtle.exportKey("jwk",kp.publicKey);
+      var pub={kty:"EC",crv:"P-256",x:uj.x,y:uj.y};
+      await writeDoc("data/users/"+MEID+"/keys",{priv:{kty:"EC",crv:"P-256",x:pj.x,y:pj.y,d:pj.d},pub:pub});
+      KP={priv:kp.privateKey,pub:pub};
+    }
+    var ks=await DB.doc("keys/"+MEID).get(), cur=ks.exists&&ks.data()&&ks.data().jwk;
+    if(!cur||cur.x!==KP.pub.x||cur.y!==KP.pub.y) await writeDoc("keys/"+MEID,{jwk:KP.pub});
+    pubKeys[MEID]=KP.pub;
+  }catch(e){ KP=null; }
+}
+async function aesWith(u){
+  var j=pubKeys[u]; if(!j||!KP) return null;
+  var c=aesCache[u]; if(c&&c.x===j.x) return c.k;
+  var pub=await crypto.subtle.importKey("jwk",{kty:"EC",crv:"P-256",x:j.x,y:j.y},{name:"ECDH",namedCurve:"P-256"},false,[]);
+  var k=await crypto.subtle.deriveKey({name:"ECDH",public:pub},KP.priv,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+  aesCache[u]={x:j.x,k:k}; return k;
+}
+async function enc(u,obj){
+  try{ var k=await aesWith(u); if(!k) return null;
+    var iv=crypto.getRandomValues(new Uint8Array(12));
+    var ct=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},k,new TextEncoder().encode(JSON.stringify(obj)));
+    return {iv:b64(iv),ct:b64(ct)};
+  }catch(e){ return null; }
+}
+async function dec(u,box){
+  try{ if(!box||!box.iv||!box.ct) return null; var k=await aesWith(u); if(!k) return null;
+    var pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(box.iv)},k,unb64(box.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }catch(e){ return null; }
+}
+
+/* ---------- friends' encrypted status ---------- */
+var shareGen=0;
+async function decryptShares(){
+  var gen=++shareGen, fv={};
+  if(KP&&MEID){
+    for(var u in sharesRaw){
+      if(u===MEID||blocked(u)) continue;
+      var to=sharesRaw[u]&&sharesRaw[u].to; if(!to||!to[MEID]) continue;
+      var v=await dec(u,to[MEID]);
+      if(v&&v.acts) fv[u]={acts:v.acts||{},here:v.here||{}};
+    }
+  }
+  if(gen!==shareGen) return;
+  friendView=fv; render();
+}
+
+/* ---------- publish my status per my visibility setting ---------- */
+var pubTimer=null, pubChain=Promise.resolve(), lastShareKey=null;
+function schedulePublish(delay){
+  clearTimeout(pubTimer);
+  pubTimer=setTimeout(function(){ pubChain=pubChain.then(doPublish).catch(function(){}); }, delay||0);
+}
+async function doPublish(){
+  if(!DB||!MEID||readonly||!settings.mode||!readyGoing) return;
+  var m=settings.mode;
+  var pubBody=(m==="all")?{acts:pubActs(myState.acts),here:myState.here}:{acts:{},here:{}};
+  if(canon(pubBody)!==canon(going[MEID]||{})){
+    await writeDoc("going/"+MEID,{acts:pubBody.acts,here:pubBody.here,at:new Date().toISOString()});
+  }
+  var fr=(m==="friends"&&KP)?friendIds().filter(function(u){ return pubKeys[u]; }):[];
+  var key=m+"|"+fr.join(",")+"|"+canon(myState);
+  if(key===lastShareKey) return;
+  var to={};
+  for(var i=0;i<fr.length;i++){ var b=await enc(fr[i],{acts:pubActs(myState.acts),here:myState.here}); if(b) to[fr[i]]=b; }
+  var cur=sharesRaw[MEID];
+  if(fr.length||(cur&&hasAny(cur.to))) await writeDoc("shares/"+MEID,{to:to});
+  lastShareKey=key;
+}
+
+/* ---------- my actions ---------- */
+function cloneMine(){ var o={acts:{},here:{}},k; for(k in myState.acts) if(myState.acts[k]) o.acts[k]=myState.acts[k]; for(k in myState.here) if(myState.here[k]) o.here[k]=myState.here[k]; return o; }
+async function setMine(next,key){
+  var prev=myState; myState=next; busy[key]=1; render();
+  try{ await writeDoc("data/users/"+MEID+"/mine",{acts:next.acts,here:next.here}); schedulePublish(0); }
+  catch(e){ myState=prev; if(e&&e.code==="invalid_argument") readonly=true; }
+  delete busy[key]; render();
+}
+function toggleJoin(id){
+  if(!MEID||readonly||busy[id]) return;
+  if(!settings.mode){ $("setup").hidden=false; return; }
+  var n=cloneMine();
+  if(n.acts[id]){ delete n.acts[id]; delete n.here[id]; }
+  else{
+    var a=null; acts.forEach(function(x){ if(x.id===id) a=x; });
+    n.acts[id]=a?{day:a.day,time:a.time||"",title:a.title||"",place:a.place||"",mins:a.mins||0,met:a.met||3.5,side:a.side||"people"}:true;
+  }
+  setMine(n,id);
+}
+function toggleHere(id){
+  if(!MEID||readonly||busy["h"+id]) return;
+  var n=cloneMine(); if(n.here[id]) delete n.here[id]; else n.here[id]=new Date().toISOString();
+  setMine(n,"h"+id);
+}
+async function saveSettings(patch){
+  var n={mode:settings.mode,blocks:Object.assign({},settings.blocks||{}),side:settings.side||null,lang:settings.lang||null};
+  for(var k in patch) n[k]=patch[k];
+  settings=n; render();
+  try{ await writeDoc("data/users/"+MEID+"/settings",{mode:n.mode||null,blocks:n.blocks,side:n.side||null,lang:n.lang||null}); }catch(e){}
+  decryptShares(); syncInbox(); schedulePublish(0);
+}
+async function setFollow(u,on){
+  if(!MEID||readonly||u===MEID) return;
+  var cur=(follows[MEID]&&follows[MEID].list)||{}, n={}, k;
+  for(k in cur) if(cur[k]) n[k]=true;
+  if(on) n[u]=true; else delete n[u];
+  follows[MEID]={list:n}; render();
+  try{ await writeDoc("follows/"+MEID,{list:n}); }catch(e){}
+  syncInbox(); schedulePublish(0);
+}
+async function setBlock(u,on){
+  if(!MEID||readonly) return;
+  var b=Object.assign({},settings.blocks||{}); if(on) b[u]=true; else delete b[u];
+  if(on&&iFollow(u)) await setFollow(u,false);
+  if(on&&chatWith===u) closePanel();
+  await saveSettings({blocks:b});
+}
+async function saveWeight(v){
+  var n=Number(v); if(!(n>=30&&n<=200)) return;
+  weight=n; render();
+  try{ await writeDoc("data/users/"+MEID+"/profile",{weight:n}); }catch(e){}
+}
+
+/* ---------- inbox (one subscription per friend) ---------- */
+function syncInbox(){
+  if(!DB||!MEID) return;
+  var want={}; friendIds().forEach(function(u){ want[u]=1; });
+  Object.keys(inboxSubs).forEach(function(u){ if(!want[u]){ try{ inboxSubs[u](); }catch(e){} delete inboxSubs[u]; delete inboxDocs[u]; } });
+  Object.keys(want).forEach(function(u){
+    if(inboxSubs[u]) return;
+    inboxSubs[u]=DB.doc("outbox/"+u+"/to/"+MEID).onSnapshot(function(s){
+      inboxDocs[u]=s.exists?(s.data()||{}):{};
+      if(chatWith===u) renderChat(); else render();
+    },function(){});
+  });
+}
+function unread(u){ var d=inboxDocs[u]; return !!(d&&d.last&&(!lastRead[u]||d.last>lastRead[u])); }
+
+/* ---------- records ---------- */
+function myLog(){
+  var t=today(), live={}, out=[];
+  acts.forEach(function(a){ live[a.id]=a; });
+  for(var id in myState.acts){
+    var v=myState.acts[id]; if(!v) continue;
+    var a=live[id], sn=(typeof v==="object")?v:{};
+    var day=(a&&a.day)||sn.day; if(!day||day>t) continue;
+    out.push({id:id,day:day,time:(a&&a.time)||sn.time||"",title:(a&&a.title)||sn.title||"",place:(a&&a.place)||sn.place||"",
+              mins:(a&&a.mins)||Number(sn.mins)||0, met:(a&&a.met)||Number(sn.met)||3.5});
+  }
+  return out;
+}
+function daysIn(log,from,to){ var s={}; log.forEach(function(e){ if(e.day>=from&&e.day<=to) (s[e.day]=s[e.day]||[]).push(e); }); return s; }
+function atDay(d,n){ var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()+n); return x; }
+function monday(d){ return atDay(d,-((d.getDay()+6)%7)); }
+function weekInfo(log){
+  var mon=monday(new Date()), t=today();
+  var cur=daysIn(log,dstr(mon),dstr(atDay(mon,6)));
+  var prev=daysIn(log,dstr(atDay(mon,-7)),dstr(atDay(mon,-1)));
+  var cells=[]; for(var i=0;i<7;i++){ var ds=dstr(atDay(mon,i)); cells.push({ds:ds,on:!!cur[ds],today:ds===t,future:ds>t}); }
+  return {n:Object.keys(cur).length, prev:Object.keys(prev).length, cells:cells};
+}
+function monthInfo(log,ym){
+  var p=ym.split("-"), y=Number(p[0]), mo=Number(p[1]), last=new Date(y,mo,0).getDate();
+  var from=ym+"-01", to=ym+"-"+pad(last), n=0, mins=0, kcal=0;
+  log.forEach(function(e){ if(e.day>=from&&e.day<=to){ n++; mins+=e.mins; if(weight) kcal+=e.met*weight*(e.mins/60); } });
+  var bd=daysIn(log,from,to);
+  return {days:Object.keys(bd).length, byDay:bd, n:n, mins:mins, kcal:Math.round(kcal), y:y, mo:mo, last:last};
+}
+var WL=["一","二","三","四","五","六","日"];
+function weekStrip(w){
+  var g=el("div","week");
+  w.cells.forEach(function(c,i){
+    var d=el("div","wd"+(c.on?" on":"")+(c.today?" today":"")+(c.future?" future":""));
+    d.setAttribute("role","img"); d.setAttribute("aria-label",T(WDMON[i])+(c.on?T("，运动了"):(c.future?"":T("，没运动"))));
+    var dot=el("i",null,c.on?"✓":""); dot.setAttribute("aria-hidden","true");
+    var lb=el("span",null,c.today?T("今天"):T(WL[i])); lb.setAttribute("aria-hidden","true");
+    d.appendChild(dot); d.appendChild(lb); g.appendChild(d);
+  });
+  return g;
+}
+function fig(v,l,link){ var f=el("div","fig"); f.appendChild(el("b",null,v)); f.appendChild(link?btn(null,l,function(){ go("me"); }):el("span",null,l)); return f; }
+function lotteryBlock(n,box){
+  var tr=el("div","track"), fl=el("div","fill"); tr.style.marginTop="18px";
+  fl.style.width=Math.max(n?4:0,Math.min(100,Math.round(n/GOAL*100)))+"%";
+  tr.appendChild(fl); box.appendChild(tr);
+  var lot=el("p","lot");
+  if(n>=GOAL){ lot.appendChild(document.createTextNode(T("已达标 · "))); lot.appendChild(el("b",null,T("进入本月抽奖"))); lot.appendChild(document.createTextNode(T("，月底抽 5 位送小礼物"))); }
+  else { lot.appendChild(document.createTextNode(T("本月再参加 "))); lot.appendChild(el("b",null,T("{n} 次",{n:GOAL-n}))); lot.appendChild(document.createTextNode(T("，就能进入抽奖 · 抽 5 位送小礼物"))); }
+  box.appendChild(lot);
+}
+function summaryCard(){
+  var log=myLog(), w=weekInfo(log), m=monthInfo(log,today().slice(0,7));
+  var card=el("section","month");
+  card.appendChild(el("h2",null,T("我的运动")));
+  var figs=el("div","figs");
+  figs.appendChild(fig(T("{n} 天",{n:w.n}),T("本周运动")));
+  figs.appendChild(fig(T("{n} 天",{n:m.days}),T("本月运动")));
+  figs.appendChild(fig(String(m.n),T("本月活动次数")));
+  card.appendChild(figs);
+  card.appendChild(weekStrip(w));
+  lotteryBlock(m.n,card);
+  var more=el("p"); more.style.margin="10px 0 0";
+  more.appendChild(btn("link",T("看日历、分钟和消耗 ›"),function(){ go("log"); }));
+  card.appendChild(more);
+  return card;
+}
+function shiftMonth(k){
+  var p=logMonth.split("-"), d=new Date(Number(p[0]),Number(p[1])-1+k,1);
+  var ym=d.getFullYear()+"-"+pad(d.getMonth()+1);
+  if(ym>today().slice(0,7)) return;
+  logMonth=ym; selDay=null; renderLog();
+}
+function renderLog(){
+  var c=$("logbox"); if(!c) return; c.textContent="";
+  if(!MEID){ c.appendChild(stateBox(T("登录后才能看到记录"),T("登录并报名活动后，这里会显示你每周、每月运动了几天。"))); return; }
+  if(!loaded){ c.appendChild(stateBox(T("正在读取…"),T("马上就好"))); return; }
+  var log=myLog(), w=weekInfo(log), cm=today().slice(0,7);
+  if(!logMonth) logMonth=cm;
+  var m=monthInfo(log,logMonth);
+
+  var wc=el("section","statcard"), wh=el("div","stathead");
+  wh.appendChild(el("h2",null,T("本周")));
+  var d=w.n-w.prev;
+  if(d>0) wh.appendChild(el("span","delta",T("比上周多 {n} 天",{n:d})));
+  else if(w.prev&&d===0) wh.appendChild(el("span","delta",T("和上周一样，保持住")));
+  else if(w.prev) wh.appendChild(el("span","hint",T("上周 {n} 天",{n:w.prev})));
+  wc.appendChild(wh);
+  var b1=el("p","big",String(w.n)); b1.appendChild(el("small",null,T("天运动"))); wc.appendChild(b1);
+  wc.appendChild(weekStrip(w));
+  c.appendChild(wc);
+
+  var mc=el("section","statcard"), mh=el("div","stathead"), nav=el("div","mnav");
+  var pb=btn(null,"‹",function(){ shiftMonth(-1); }); pb.setAttribute("aria-label",T("上个月"));
+  var nb=btn(null,"›",function(){ shiftMonth(1); }); nb.setAttribute("aria-label",T("下个月")); if(logMonth>=cm) nb.disabled=true;
+  nav.appendChild(pb); nav.appendChild(el("span",null,T("{y}年{m}月",{y:m.y,m:m.mo}))); nav.appendChild(nb);
+  mh.appendChild(nav); mc.appendChild(mh);
+  var b2=el("p","big",String(m.days)); b2.appendChild(el("small",null,T("天运动"))); mc.appendChild(b2);
+
+  var cal=el("div","cal");
+  WL.forEach(function(h){ cal.appendChild(el("div","h",T(h))); });
+  var lead=(new Date(m.y,m.mo-1,1).getDay()+6)%7;
+  for(var i=0;i<lead;i++) cal.appendChild(el("div"));
+  for(var dd=1;dd<=m.last;dd++){
+    (function(dd){
+      var ds=logMonth+"-"+pad(dd), on=!!m.byDay[ds], fut=ds>today(), td=ds===today();
+      var b=btn([on?"on":"",td?"today":"",fut?"future":""].join(" ").trim()||null,String(dd),function(){ selDay=(selDay===ds?null:ds); renderLog(); });
+      b.setAttribute("aria-pressed",selDay===ds?"true":"false");
+      b.setAttribute("aria-label",mdLabel(m.mo,dd)+(on?T("，运动了"):""));
+      if(fut) b.disabled=true;
+      cal.appendChild(b);
+    })(dd);
+  }
+  mc.appendChild(cal);
+
+  if(selDay&&selDay.slice(0,7)===logMonth){
+    var info=el("div","dayinfo"), es=m.byDay[selDay]||[], sp=selDay.split("-"), lab=mdLabel(Number(sp[1]),Number(sp[2]));
+    if(!es.length) info.textContent=T("{date}：这天没有运动记录。",{date:lab});
+    else{
+      info.appendChild(el("b",null,lab));
+      es.forEach(function(e){ info.appendChild(el("div",null,[dispTitle(e.title)||T("title:活动"),e.time,e.mins?T("{n} 分钟",{n:e.mins}):"",e.place].filter(Boolean).join(" · "))); });
+    }
+    mc.appendChild(info);
+  }else mc.appendChild(el("p","hint",T("点日历上的某一天，看看那天做了什么。")));
+
+  var figs=el("div","figs"); figs.style.marginTop="18px";
+  figs.appendChild(fig(String(m.n),T("次活动")));
+  figs.appendChild(fig(String(m.mins),T("分钟")));
+  figs.appendChild(weight?fig(String(m.kcal),T("千卡 · 估算")):fig("—",T("设置体重"),true));
+  mc.appendChild(figs);
+  if(logMonth===cm) lotteryBlock(m.n,mc);
+  c.appendChild(mc);
+
+  if(!log.length) c.appendChild(stateBox(T("还没有运动记录"),T("在「活动」里报名，活动当天过后就会记在这里。")));
+}
+
+/* ---------- tabs ---------- */
+function go(t){
+  tab=t;
+  document.querySelectorAll(".tabs button").forEach(function(b){ if(b.getAttribute("data-tab")===t) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+  buildTab(); render(); window.scrollTo(0,0);
+}
+function buildTab(){
+  var v=$("view"); v.textContent="";
+  if(tab==="act"){ var sg=el("div"); sg.id="segBox"; v.appendChild(sg); var m=el("div"); m.id="monthBox"; v.appendChild(m); var n=el("div"); n.id="newBox"; v.appendChild(n); var l=el("main"); l.id="list"; v.appendChild(l); }
+  if(tab==="friends"){
+    if(MEID&&USER&&!readonly){
+      var s=document.createElement("input"); s.type="search"; s.id="f-search"; s.className="search"; s.placeholder=T("搜昵称或名字，找到想关注的人"); s.autocomplete="off";
+      s.setAttribute("aria-label",T("搜索"));
+      s.addEventListener("focus",function(){ runSearch(s.value||""); });
+      s.addEventListener("input",function(){ runSearch(s.value); });
+      v.appendChild(s); var r=el("div"); r.id="sres"; v.appendChild(r);
+    }
+    var f=el("div"); f.id="flist"; v.appendChild(f);
+  }
+  if(tab==="me"){ var c=el("div"); c.id="mebox"; v.appendChild(c); }
+  if(tab==="log"){ var lb=el("div"); lb.id="logbox"; v.appendChild(lb); }
+}
+function runSearch(q){
+  var qq=(q||"").trim();
+  function done(hits){
+    var r=$("sres"); if(!r) return; r.textContent="";
+    var seen={}, ids=[];
+    if(qq) for(var u in nicks) if(u!==MEID&&nicks[u].indexOf(qq)>=0&&!seen[u]){ seen[u]=1; ids.push(u); }
+    (hits||[]).forEach(function(h){ if(h.id&&h.id!==MEID&&!seen[h.id]){ seen[h.id]=1; ids.push(h.id); } });
+    ids.forEach(function(id){ r.appendChild(personRow(id)); });
+    if(qq&&!ids.length) r.appendChild(el("p","hint",T("没找到。也可以在活动里找到一起运动的人。")));
+    fillPeople(r);
+  }
+  if(USER) USER.search(qq).then(done); else done([]);
+}
+function render(){
+  var dot=$("tabDot"); if(dot) dot.hidden=!friendIds().some(unread);
+  var tl=$("tagline"); if(tl) tl.textContent=viewSide==="dogs"?T("狗狗找玩伴"):T("附近谁在动");
+  if(tab==="act") renderActs();
+  if(tab==="friends") renderFriends();
+  if(tab==="me") renderMe();
+  if(tab==="log") renderLog();
+  if(panelMode&&panelMode!=="chat") renderPanel();
+}
+
+function renderActs(){
+  var mb=$("monthBox"), nb=$("newBox"), list=$("list"), sb=$("segBox"); if(!list) return;
+  sb.textContent=""; sb.appendChild(segControl());
+  mb.textContent=""; if(loaded&&MEID) mb.appendChild(summaryCard());
+  nb.textContent=""; if(loaded&&MEID&&!readonly) nb.appendChild(btn("new",T("＋ 发起活动"),openSheet));
+  list.textContent="";
+  if(!loaded){ list.appendChild(stateBox(T("正在看看附近…"),T("马上就好"))); return; }
+  var t=today();
+  var up=acts.filter(function(a){ return a.day&&a.day>=t&&a.side===viewSide&&!(a.by&&blocked(a.by)); })
+             .sort(function(x,y){ return (x.day+" "+(x.time||"")).localeCompare(y.day+" "+(y.time||"")); });
+  if(!up.length){
+    if(viewSide==="dogs"){
+      list.appendChild(stateBox(T("还没有狗狗活动"),T("点上面的「发起活动」，约附近的狗狗一起玩。")));
+      if(MEID&&!readonly&&!dogsOf(MEID).length){ var hp=el("p"); hp.style.textAlign="center"; hp.appendChild(btn("link",T("先添加我的狗狗"),function(){ openDogEditor(-1); })); list.appendChild(hp); }
+    } else list.appendChild(stateBox(T("还没有人发起活动"),T("点上面的「发起活动」，定个时间地点，大家就能看到并报名了。")));
+    return;
+  }
+  var curDay=null;
+  up.forEach(function(a){
+    if(a.day!==curDay){ curDay=a.day; var h=el("div","day"); h.appendChild(el("h2",null,dayLabel(a.day))); h.appendChild(el("span",null,dayNote(a.day))); h.appendChild(el("i")); list.appendChild(h); }
+    var g=goersOf(a.id), joined=!!(MEID&&myState.acts[a.id]);
+    var c=el("article","card");
+    c.appendChild(el("h3",null,dispTitle(a.title)||T("title:活动")));
+    var m=el("p","meta"); m.appendChild(el("b",null,a.time||""));
+    m.appendChild(document.createTextNode((a.place?(SEP()+a.place):"")+(a.mins?(SEP()+T("{n} 分钟",{n:a.mins})):""))); c.appendChild(m);
+    if(a.side==="dogs"){
+      var tg=el("div","tags"); tg.appendChild(el("span","tag",T(SIZES[a.size])));
+      var md=MEID?dogsOf(MEID):[];
+      if(md.length&&a.size!=="any"&&!md.some(function(d){ return fits(d.size,a.size); })) tg.appendChild(el("span","tag warn",T("你的狗狗可能不适合")));
+      c.appendChild(tg);
+    }
+
+    var who=el("button","who"); who.type="button";
+    if(g.length){ var fc=el("div","faces"); g.slice(0,4).forEach(function(u){ fc.appendChild(avatar(u)); }); who.appendChild(fc); }
+    var hn=hereOf(a.id), dn=(a.side==="dogs")?g.reduce(function(n,u){ return n+dogsOf(u).length; },0):0;
+    var suffix=(dn?T(" · {n} 只狗狗",{n:dn}):"")+(hn?T("　{n} 人已到",{n:hn}):"");
+    var pw=el("p",null,g.length?(T("{n} 人参加",{n:g.length})+suffix):T("还没有人报名，第一个来？"));
+    if(g.length){ pw.setAttribute("data-names",g.join(",")); pw.setAttribute("data-suffix",suffix); }
+    who.appendChild(pw);
+    if(g.length) who.appendChild(el("span","more",T("看看是谁 ›")));
+    if(g.length) who.addEventListener("click",function(){ openPanel("people",a.id); }); else who.disabled=true;
+    c.appendChild(who);
+
+    var b=btn("btn"+(joined?" on":""),joined?T("已参加 ✓"):T("参加"),function(){ toggleJoin(a.id); });
+    if(readonly||!MEID||busy[a.id]) b.disabled=true;
+    c.appendChild(b);
+    if(joined&&a.day===t&&!readonly){
+      var isH=!!myState.here[a.id];
+      var hb=btn("btn "+(isH?"here":"ghost"),isH?T("已到 ✓"):T("我到了"),function(){ toggleHere(a.id); });
+      if(busy["h"+a.id]) hb.disabled=true; c.appendChild(hb);
+    }else if(joined) c.appendChild(el("p","hint",T("再点一次可以取消")));
+    if(joined&&settings.mode&&settings.mode!=="all") c.appendChild(el("p","privacy",settings.mode==="friends"?T("🔒 你的报名只有好友能看到"):T("🔒 你的报名只有你自己能看到")));
+    if(readonly) c.appendChild(el("p","hint",T("当前为只读访问，无法报名")));
+    else if(!MEID) c.appendChild(el("p","hint",T("登录后就可以报名了")));
+    if(MEID&&a.by===MEID&&!readonly){ var mw=el("div","mine"); mw.appendChild(btn("link",T("删除这个活动"),function(){ removeAct(a.id); })); c.appendChild(mw); }
+    list.appendChild(c);
+  });
+  fillPeople(list);
+}
+async function removeAct(id){ if(!DB) return; try{ await DB.collection("activities").doc(id).delete(); }catch(e){} }
+
+function personRow(u){
+  var r=el("div","row"); r.appendChild(avatar(u));
+  var nm=btn("nm",null,function(){ openPanel("person",u); });
+  nm.appendChild(nameSpan(u)); var rl=relLabel(u); if(rl) nm.appendChild(el("small",null,rl));
+  var dl=dogOwnerLine(u); if(dl) nm.appendChild(el("small",null,dl));
+  r.appendChild(nm);
+  var a=actionBtn(u); if(a) r.appendChild(a);
+  return r;
+}
+function actionBtn(u){
+  if(u===MEID||readonly||!MEID||blocked(u)) return null;
+  if(isFriend(u)) return btn("sm",unread(u)?T("新消息"):T("发消息"),function(){ openChat(u); });
+  if(iFollow(u)) return btn("sm out",T("已关注"),function(){ openPanel("person",u); });
+  return btn("sm",followsMe(u)?T("回关"):T("关注"),function(){ setFollow(u,true); });
+}
+
+function renderFriends(){
+  var f=$("flist"); if(!f||!canRebuild(f)) return; f.textContent="";
+  if(!MEID){ f.appendChild(stateBox(T("登录后才能加好友"),T("登录之后，可以关注一起运动的人，互相关注就是好友。"))); return; }
+  var fr=friendIds(), fo=followerIds(), fg=followingIds();
+  if(fo.length){ f.appendChild(el("h2","sec",T("关注了你 · {n}",{n:fo.length}))); fo.forEach(function(u){ f.appendChild(personRow(u)); }); }
+  f.appendChild(el("h2","sec",T("好友 · {n}",{n:fr.length})));
+  if(fr.length) fr.forEach(function(u){ f.appendChild(personRow(u)); });
+  else f.appendChild(stateBox(T("还没有好友"),T("在活动卡片上点「看看是谁」，关注一起运动的人。对方也关注你，你们就是好友，可以私聊。")));
+  if(fg.length){ f.appendChild(el("h2","sec",T("我关注的 · 等对方回关"))); fg.forEach(function(u){ f.appendChild(personRow(u)); }); }
+  fillPeople(f);
+}
+
+function modeOptions(box,onPick){
+  MODES.forEach(function(m){
+    var o=btn("opt",null,function(){ onPick(m[0]); });
+    o.setAttribute("aria-pressed",settings.mode===m[0]?"true":"false");
+    o.appendChild(el("b",null,T(m[1]))); o.appendChild(el("span",null,T(m[2])));
+    if(m[0]==="friends"&&!cryptoOK){ o.disabled=true; o.appendChild(el("span",null,T("这个设备不支持加密，暂时不能选。"))); }
+    box.appendChild(o);
+  });
+}
+function renderMe(){
+  var c=$("mebox"); if(!c||!canRebuild(c)) return; c.textContent="";
+  var lh=el("h2","sec",T("语言 · Language")); lh.style.marginTop="4px"; c.appendChild(lh); c.appendChild(langRow(true));
+  if(!MEID){ c.appendChild(stateBox(T("还没有登录"),T("登录之后才能设置。"))); return; }
+  var p=el("div","person"); p.appendChild(avatar(MEID)); var h=el("h2"); h.appendChild(nameSpan(MEID)); p.appendChild(h);
+  p.appendChild(el("p",null,T("登录账号：{name}",{name:(ME&&ME.name)||T("已登录")})));
+  if(!readonly&&!editNick) p.appendChild(btn("link",T("修改昵称"),function(){ editNick=true; renderMe(); var i=$("nick-edit"); if(i) i.focus(); }));
+  c.appendChild(p);
+  if(editNick){
+    var nw=el("div","wset"), ni=document.createElement("input");
+    ni.type="text"; ni.id="nick-edit"; ni.maxLength=12; ni.value=myNick||""; ni.setAttribute("aria-label",T("昵称"));
+    nw.appendChild(ni);
+    nw.appendChild(btn("sm",T("保存"),async function(){ if(await saveNick(ni.value)){ editNick=false; renderMe(); } }));
+    nw.appendChild(btn("sm out",T("取消"),function(){ editNick=false; renderMe(); }));
+    c.appendChild(nw);
+  }
+  c.appendChild(el("h2","sec",T("谁能看到我的动态")));
+  c.appendChild(el("p","hint",T("动态 = 你报名了哪些活动、有没有点「我到了」")).cloneNode(true));
+  var ob=el("div"); ob.style.marginTop="12px"; c.appendChild(ob);
+  if(readonly) c.appendChild(el("p","hint",T("当前为只读访问，不能修改")));
+  else modeOptions(ob,function(m){ saveSettings({mode:m}); });
+
+  var myd=dogsOf(MEID);
+  c.appendChild(el("h2","sec",T("我的狗狗 · {n}",{n:myd.length})));
+  myd.forEach(function(d,i){ c.appendChild(dogCard(d,readonly?null:btn("sm out",T("编辑"),function(){ openDogEditor(i); }))); });
+  if(!myd.length) c.appendChild(el("p","hint",T("养狗的话，加上狗狗的大小和性格，别的主人更放心。")));
+  if(myd.length<3&&!readonly) c.appendChild(btn("btn ghost",T("＋ 添加狗狗"),function(){ openDogEditor(-1); }));
+  c.appendChild(el("h2","sec",T("体重")));
+  var w=el("div","wset"), inp=document.createElement("input");
+  inp.type="number"; inp.min="30"; inp.max="200"; inp.id="w-kg"; inp.placeholder=T("公斤"); inp.setAttribute("aria-label",T("体重（公斤）"));
+  if(weight) inp.value=weight;
+  w.appendChild(inp); w.appendChild(btn("sm",T("保存"),function(){ saveWeight(inp.value); }));
+  c.appendChild(w);
+  c.appendChild(el("p","hint",T("只用来估算消耗，存在你自己的空间里，别人看不到。")));
+
+  var bl=Object.keys(settings.blocks||{}).filter(function(u){ return settings.blocks[u]; });
+  c.appendChild(el("h2","sec",T("屏蔽名单 · {n}",{n:bl.length})));
+  if(!bl.length) c.appendChild(el("p","hint",T("没有屏蔽任何人。在别人的主页可以屏蔽。")));
+  bl.forEach(function(u){ var r=el("div","row"); r.appendChild(avatar(u)); var nm=el("div","nm"); nm.appendChild(nameSpan(u)); r.appendChild(nm); r.appendChild(btn("sm out",T("取消屏蔽"),function(){ setBlock(u,false); })); c.appendChild(r); });
+
+  var ft=el("p"); ft.style.textAlign="center"; ft.style.marginTop="28px";
+  ft.appendChild(btn("link",T("安全提示"),function(){ $("safety").hidden=false; })); c.appendChild(ft);
+  fillPeople(c);
+}
+
+/* ---------- panel: people / person / chat ---------- */
+function panelHead(body,titleNode,closeLabel){
+  var h=el("header","top"); var t=el("span","title"); t.appendChild(titleNode); h.appendChild(t);
+  h.appendChild(btn("close",closeLabel||T("关闭"),closePanel)); body.appendChild(h);
+}
+function openPanel(mode,arg){ closeChatSub(); chatWith=null; panelMode=mode; panelArg=arg; $("panel").hidden=false; $("panel").scrollTop=0; renderPanel(); }
+function closeChatSub(){ if(chatOutSub){ try{ chatOutSub(); }catch(e){} chatOutSub=null; } }
+function closePanel(){ dogDraft=null; closeChatSub(); chatWith=null; panelMode=null; panelArg=null; $("panel").hidden=true; render(); }
+function renderPanel(){
+  var body=$("panelBody"); if(!body||!canRebuild(body)) return; body.textContent="";
+  if(panelMode==="people"){
+    var a=null; acts.forEach(function(x){ if(x.id===panelArg) a=x; });
+    if(!a){ closePanel(); return; }
+    panelHead(body,document.createTextNode(T("{title} · 参加的人",{title:dispTitle(a.title)||T("title:活动")})));
+    body.appendChild(el("p","hint",(dayLabel(a.day)+" "+(a.time||"")+(a.place?(SEP()+a.place):"")).trim()));
+    goersOf(a.id).forEach(function(u){ body.appendChild(personRow(u)); });
+    body.appendChild(el("p","hint",T("有的人只给好友看，所以这里可能不是全部。")));
+  }
+  if(panelMode==="dog"&&dogDraft){
+    var D=dogDraft;
+    panelHead(body,document.createTextNode(D.idx>=0?T("编辑狗狗"):T("添加狗狗")),T("取消"));
+    var f1=el("div","field"), l1=el("label",null,T("叫什么名字？")); l1.setAttribute("for","d-name"); f1.appendChild(l1);
+    var i1=document.createElement("input"); i1.id="d-name"; i1.type="text"; i1.maxLength=12; i1.value=D.name; i1.placeholder=T("比如：豆豆"); i1.autocomplete="off";
+    i1.addEventListener("input",function(){ D.name=i1.value; }); f1.appendChild(i1); body.appendChild(f1);
+
+    var f2=el("div","field"), l2=el("label",null,T("什么品种？")); l2.setAttribute("for","d-breed"); f2.appendChild(l2);
+    var bc=el("div","chips"), i2=document.createElement("input");
+    BREEDS.forEach(function(b){ chip(bc,T(b),b,function(v){ D.breed=v; i2.value=T(v); }); });
+    i2.id="d-breed"; i2.type="text"; i2.maxLength=12; i2.value=dispBreed(D.breed); i2.placeholder=T("不在上面的话，写在这里"); i2.autocomplete="off";
+    i2.addEventListener("input",function(){ D.breed=i2.value; syncPressed(bc,canonBreed(i2.value)); });
+    syncPressed(bc,canonBreed(D.breed)); f2.appendChild(bc); f2.appendChild(i2); body.appendChild(f2);
+
+    function chipField(label,map,key){
+      var f=el("div","field"); f.appendChild(el("span","flabel",label));
+      var box=el("div","chips"); box.setAttribute("role","group"); box.setAttribute("aria-label",label);
+      Object.keys(map).forEach(function(k){ chip(box,T(map[k]),k,function(v){ D[key]=v; }); });
+      syncPressed(box,D[key]); f.appendChild(box); body.appendChild(f);
+    }
+    chipField(T("多大？"),DOGSIZE,"size");
+    chipField(T("性格怎么样？"),TEMPER,"temper");
+    var fv=el("div","field"); fv.appendChild(el("span","flabel",T("打过疫苗了吗？")));
+    var vb=el("div","chips"); vb.setAttribute("role","group"); vb.setAttribute("aria-label",T("疫苗"));
+    chip(vb,T("已打疫苗"),"yes",function(){ D.vax=true; }); chip(vb,T("没打 / 不清楚"),"no",function(){ D.vax=false; });
+    syncPressed(vb,D.vax===true?"yes":(D.vax===false?"no":"")); fv.appendChild(vb); body.appendChild(fv);
+
+    if(D.err){ body.appendChild(el("p","err",D.err)); }
+    body.appendChild(btn("submit teal",T("保存"),saveDog));
+    body.appendChild(el("p","hint",T("狗狗的资料别的主人能看到，方便判断合不合得来。")));
+    if(D.idx>=0){
+      var dp=el("p"); dp.style.textAlign="center"; dp.style.marginTop="18px";
+      dp.appendChild(btn("link",D.confirmDel?T("再点一次，确认删除"):T("删除这只狗狗"),function(){ if(D.confirmDel) deleteDog(D.idx); else { D.confirmDel=true; renderPanel(); } }));
+      body.appendChild(dp);
+    }
+    return;
+  }
+  if(panelMode==="person"){
+    var u=panelArg;
+    panelHead(body,document.createTextNode(""));
+    var p=el("div","person"); p.appendChild(avatar(u)); var h=el("h2"); h.appendChild(nameSpan(u)); p.appendChild(h);
+    var rl=isFriend(u)?T("你们互相关注 · 好友"):blocked(u)?T("你已屏蔽 TA"):iFollow(u)?T("你关注了 TA · 等 TA 回关"):followsMe(u)?T("TA 关注了你"):"";
+    if(rl) p.appendChild(el("p",null,rl)); body.appendChild(p);
+    var pds=dogsOf(u);
+    if(pds.length){ body.appendChild(el("h2","sec",u===MEID?T("我的狗狗"):T("TA 的狗狗"))); pds.forEach(function(d){ body.appendChild(dogCard(d)); }); }
+    if(u!==MEID&&MEID&&!readonly){
+      var st=el("div","stack");
+      if(blocked(u)) st.appendChild(btn("btn on",T("取消屏蔽"),function(){ setBlock(u,false); }));
+      else{
+        if(isFriend(u)) st.appendChild(btn("btn",T("发消息"),function(){ openChat(u); }));
+        st.appendChild(iFollow(u)?btn("btn on",T("取消关注"),function(){ setFollow(u,false); }):btn("btn",followsMe(u)?T("回关"):T("关注"),function(){ setFollow(u,true); }));
+        st.appendChild(btn("btn ghost",T("屏蔽 TA"),function(){ setBlock(u,true); }));
+      }
+      body.appendChild(st);
+      var n=el("div","note");
+      if(blocked(u)&&settings.mode==="all"){
+        n.appendChild(document.createTextNode(T("你现在是「所有人可见」，被屏蔽的人仍然能看到你报名了哪些活动。要真正对 TA 隐藏，请改成「仅好友可见」。")));
+        n.appendChild(btn("sm",T("改成仅好友可见"),function(){ saveSettings({mode:"friends"}); }));
+        body.appendChild(n);
+      }else if(!blocked(u)){
+        n.textContent=T("屏蔽后：TA 不再是你的好友，看不到你给好友的动态，发给你的消息你也看不到。");
+        body.appendChild(n);
+      }
+    }
+  }
+  fillPeople(body);
+}
+function openChat(u){
+  if(!isFriend(u)) return;
+  closeChatSub(); panelMode="chat"; panelArg=u; chatWith=u;
+  var body=$("panelBody"); body.textContent="";
+  var tn=el("span"); tn.appendChild(nameSpan(u)); panelHead(body,tn,T("返回"));
+  body.appendChild(el("p","lock",T("🔒 消息已加密，只有你们两个人能看到")));
+  if(!KP||!pubKeys[u]) body.appendChild(el("div","note",T("对方还没打开过新版 FindNet，暂时发不了消息。等 TA 打开一次就可以了。")));
+  var list=el("div","chat"); list.id="chatList"; body.appendChild(list);
+  var cp=el("div","composer"), inner=el("div","inner"), inp=document.createElement("input");
+  inp.type="text"; inp.id="chatIn"; inp.maxLength=300; inp.placeholder=T("说点什么…"); inp.autocomplete="off"; inp.setAttribute("aria-label",T("消息"));
+  inp.addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); sendMsg(); } });
+  inner.appendChild(inp); inner.appendChild(btn(null,T("发送"),sendMsg)); cp.appendChild(inner); body.appendChild(cp);
+  var err=el("p","err"); err.id="chatErr"; err.hidden=true; body.appendChild(err);
+  $("panel").hidden=false;
+  chatOutSub=DB.doc("outbox/"+MEID+"/to/"+u).onSnapshot(function(s){ outDocs[u]=s.exists?(s.data()||{}):{}; renderChat(); },function(){});
+  fillPeople(body); renderChat();
+}
+var chatGen=0;
+async function decMsg(u,box){ if(!box||!box.iv) return null; var k=u+"|"+box.iv; if(k in decCache) return decCache[k]; var v=await dec(u,box); decCache[k]=v; return v; }
+async function renderChat(){
+  if(panelMode!=="chat"||!chatWith) return;
+  var u=chatWith, gen=++chatGen, all=[], i, v;
+  var th=(inboxDocs[u]&&inboxDocs[u].msgs)||[], mn=(outDocs[u]&&outDocs[u].msgs)||[];
+  for(i=0;i<th.length;i++){ v=await decMsg(u,th[i]); if(v&&v.text) all.push({me:false,text:v.text,t:v.t}); }
+  for(i=0;i<mn.length;i++){ v=await decMsg(u,mn[i]); if(v&&v.text) all.push({me:true,text:v.text,t:v.t}); }
+  if(gen!==chatGen||chatWith!==u) return;
+  all.sort(function(a,b){ return String(a.t).localeCompare(String(b.t)); });
+  var list=$("chatList"); if(!list) return; list.textContent="";
+  if(!all.length) list.appendChild(el("p","lock",T("还没有消息，打个招呼吧。")));
+  all.forEach(function(m){ var b=el("div","msg"+(m.me?" me":"")); b.appendChild(document.createTextNode(m.text)); b.appendChild(el("time",null,fmtT(m.t))); list.appendChild(b); });
+  if(inboxDocs[u]&&inboxDocs[u].last){ lastRead[u]=inboxDocs[u].last; saveRead(); var dot=$("tabDot"); if(dot) dot.hidden=!friendIds().some(unread); }
+  var p=$("panel"); p.scrollTop=p.scrollHeight;
+}
+async function sendMsg(){
+  var u=chatWith, inp=$("chatIn"), er=$("chatErr"); if(!u||!inp||busy.send) return;
+  var text=(inp.value||"").trim().slice(0,300); if(!text) return;
+  busy.send=1; er.hidden=true;
+  var now=new Date().toISOString(), box=await enc(u,{text:text,t:now});
+  if(!box){ er.textContent=T("现在发不了：对方还没打开过新版 FindNet。"); er.hidden=false; busy.send=0; return; }
+  var next=((outDocs[u]&&outDocs[u].msgs)||[]).concat([box]).slice(-100);
+  outDocs[u]={msgs:next,last:now}; decCache[u+"|"+box.iv]={text:text,t:now};
+  inp.value=""; renderChat();
+  try{ await writeDoc("outbox/"+MEID+"/to/"+u,{msgs:next,last:now}); }
+  catch(e){ er.textContent=T("没发出去，请再试一次。"); er.hidden=false; }
+  busy.send=0;
+}
+
+/* ---------- create ---------- */
+function chip(box,label,val,fn){ var b=btn(null,label,function(){ fn(val); syncPressed(box,val); }); b.setAttribute("data-v",String(val)); b.setAttribute("aria-pressed","false"); box.appendChild(b); }
+function syncPressed(box,val){ box.querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-pressed",b.getAttribute("data-v")===String(val)?"true":"false"); }); }
+function buildChips(){
+  $("f-title").addEventListener("input",function(){ syncPressed($("actChips"),canonTitle($("f-title").value)); });
+  $("f-mins").addEventListener("input",function(){ syncPressed($("minChips"),$("f-mins").value); });
+  $("f-day").addEventListener("input",function(){ syncPressed($("dayChips"),dayKey($("f-day").value)); });
+  $("f-time").addEventListener("input",function(){ syncPressed($("timeChips"),$("f-time").value); });
+}
+function fillChips(){
+  var ac=$("actChips"); ac.textContent="";
+  (createSide==="dogs"?ACTS_D:ACTS).forEach(function(n){ chip(ac,T(n),n,function(v){ $("f-title").value=T(v); }); });
+  syncPressed(ac,canonTitle($("f-title").value));
+  var sc=$("sizeChips"); sc.textContent=""; ["any","small","big"].forEach(function(k){ chip(sc,T(SIZES[k]),k,function(v){ newSize=v; }); }); syncPressed(sc,newSize);
+  var mc=$("minChips"); mc.textContent=""; MINS.forEach(function(n){ chip(mc,T("{n} 分钟",{n:n}),n,function(v){ $("f-mins").value=v; }); }); syncPressed(mc,$("f-mins").value);
+  var dc=$("dayChips"); dc.textContent=""; DAYK.forEach(function(k,i){ chip(dc,T(k),k,function(){ $("f-day").value=dstr(addDays(i)); }); }); syncPressed(dc,dayKey($("f-day").value));
+  var tc=$("timeChips"); tc.textContent=""; TIMES.forEach(function(n){ chip(tc,n,n,function(v){ $("f-time").value=v; }); }); syncPressed(tc,$("f-time").value);
+  $("sheetTitle").textContent=createSide==="dogs"?T("发起狗狗活动"):T("发起长辈活动");
+  $("f-title").placeholder=createSide==="dogs"?T("比如：周末遛狗"):T("比如：晨间散步");
+  $("f-place").placeholder=createSide==="dogs"?T("比如：狗公园北门"):T("比如：公园东门");
+  $("sizeField").hidden=createSide!=="dogs";
+}
+function openSheet(){
+  createSide=viewSide;
+  if(lastCreateSide!==null&&lastCreateSide!==createSide) $("f-title").value="";
+  lastCreateSide=createSide; newSize="any";
+  $("err").hidden=true; $("f-day").value=today();
+  if(!$("f-mins").value) $("f-mins").value=60;
+  fillChips();
+  $("sheet").hidden=false; $("f-title").focus();
+}
+async function submit(){
+  var t=canonTitle($("f-title").value.trim()), p=$("f-place").value.trim(), d=$("f-day").value, tm=$("f-time").value, mins=Number($("f-mins").value), e=$("err");
+  if(!t||!p||!d||!tm){ e.textContent=T("还差一点：做什么、在哪儿、哪天、几点，都要填上。"); e.hidden=false; return; }
+  if(!(mins>=10&&mins<=240)) mins=60;
+  if(!DB){ e.textContent=T("现在连不上，稍后再试。"); e.hidden=false; return; }
+  e.hidden=true; var b=$("submitBtn"); b.disabled=true; b.textContent=T("正在发布…");
+  try{
+    await DB.collection("activities").doc().set({title:t,place:p,day:d,time:tm,mins:mins,met:metOf(t),side:createSide,size:createSide==="dogs"?newSize:"any",by:MEID||null,createdAt:new Date().toISOString()});
+    $("f-title").value=""; $("f-place").value=""; $("f-time").value=""; $("sheet").hidden=true;
+  }catch(er){ e.textContent=(er&&er.code==="invalid_argument")?T("你当前的访问权限还不能发起活动。"):T("发布没成功，请再试一次。"); e.hidden=false; }
+  b.disabled=false; b.textContent=T("发布活动");
+}
+
+/* ---------- nickname ---------- */
+function cleanNick(v){ return String(v||"").trim().replace(/\s+/g," ").slice(0,12); }
+async function saveNick(v){
+  var n=cleanNick(v); if(!n||!MEID||readonly) return false;
+  try{ await writeDoc("profiles/"+MEID,{nick:n}); }catch(e){ return false; }
+  myNick=n; nicks[MEID]=n; render(); return true;
+}
+function brandHero(box){
+  var h=el("div","hero");
+  var mk=el("span","mark"); mk.setAttribute("aria-hidden","true");
+  mk.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M12 22s7-7.1 7-12a7 7 0 1 0-14 0c0 4.9 7 12 7 12Z" fill="#FBF6EC"/><circle cx="12" cy="10" r="2.6" fill="#0D6B5D"/></svg>';
+  h.appendChild(mk); h.appendChild(el("h1",null,"FindNet")); h.appendChild(el("p",null,T("有伴才有劲")));
+  box.appendChild(h);
+}
+function stepDots(box,k){ var d=el("div","steps"); for(var i=1;i<=3;i++) d.appendChild(el("i",i<=k?"on":null)); box.appendChild(d); }
+function showWelcome(step){
+  welcomeStep=step;
+  var w=$("welcomeBody"); w.textContent="";
+  if(step==="anon"||step==="hello") w.appendChild(langRow(false));
+  if(step==="anon"){
+    brandHero(w);
+    w.appendChild(el("p","ask",T("先登录，才能一起动")));
+    w.appendChild(el("p","lead",T("登录之后可以报名活动、关注好友、私聊。请先登录你的 Claude 账号，再打开这个页面。")));
+    w.appendChild(btn("submit teal",T("先随便看看"),function(){ try{ sessionStorage.setItem("fn_anon","1"); }catch(e){} $("welcome").hidden=true; }));
+  }
+  if(step==="hello"){
+    brandHero(w);
+    var a=el("div","acct"), im=document.createElement("img"); im.alt=""; im.src=(ME&&ME.avatarUrl)||BLANK;
+    var tx=el("div"); tx.appendChild(el("small",null,T("已登录"))); tx.appendChild(el("b",null,(ME&&ME.name)||T("你的账号")));
+    a.appendChild(im); a.appendChild(tx); w.appendChild(a);
+    w.appendChild(btn("submit teal",T("开始使用"),function(){ showWelcome("nick"); }));
+    w.appendChild(el("p","fine",T("这个版本用 Claude 账号登录。正式版会支持微信登录。")));
+  }
+  if(step==="nick"){
+    stepDots(w,1);
+    w.appendChild(el("p","ask",T("大家怎么称呼你？")));
+    w.appendChild(el("p","lead",T("会显示在活动和好友列表里。以后可以在「我的」里改。")));
+    var inp=document.createElement("input"); inp.type="text"; inp.id="nickIn"; inp.className="bigin"; inp.maxLength=12;
+    inp.placeholder=T("比如：老王、李阿姨"); inp.autocomplete="nickname"; inp.setAttribute("aria-label",T("昵称"));
+    if(ME&&ME.name) inp.value=cleanNick(ME.name);
+    w.appendChild(inp);
+    var er=el("p","err"); er.hidden=true; w.appendChild(er);
+    var go1=btn("submit teal",T("下一步"),async function(){
+      if(!cleanNick(inp.value)){ er.textContent=T("写一个称呼吧，比如「老王」。"); er.hidden=false; return; }
+      go1.disabled=true;
+      var ok=await saveNick(inp.value);
+      go1.disabled=false;
+      if(!ok){ er.textContent=T("没保存上，请再试一次。"); er.hidden=false; return; }
+      $("welcome").hidden=true; maybeSetup();
+    });
+    inp.addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.isComposing){ e.preventDefault(); go1.click(); } });
+    w.appendChild(go1);
+    setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} },50);
+  }
+  if(step==="side"){
+    stepDots(w,2);
+    w.appendChild(el("p","ask",T("你想在 FindNet 找什么？")));
+    w.appendChild(el("p","lead",T("以后在活动页随时可以切换。")));
+    [["people",T("长辈一起走走"),T("散步、太极、广场舞，认识附近说中文的朋友。")],
+     ["dogs",T("狗狗找玩伴"),T("遛狗、狗狗社交、同品种聚会，让狗狗也交朋友。")],
+     ["both",T("两个都要"),T("比如：每天带着狗狗出门散步。")]].forEach(function(o){
+      var b=btn("opt",null,function(){
+        viewSide=o[0]==="dogs"?"dogs":"people"; try{ localStorage.setItem("fn_side",viewSide); }catch(e){}
+        $("welcome").hidden=true; saveSettings({side:o[0]}); maybeSetup();
+      });
+      b.appendChild(el("b",null,o[1])); b.appendChild(el("span",null,o[2])); w.appendChild(b);
+    });
+  }
+  $("welcome").hidden=false; $("welcome").scrollTop=0;
+}
+
+/* ---------- first run ---------- */
+function setupPick(m){ $("setup").hidden=true; saveSettings({mode:m}); maybeSetup(); }
+function maybeSetup(){
+  if(!bootDone||!$("welcome").hidden||!$("safety").hidden||!$("setup").hidden||!$("dogSafety").hidden) return;
+  if(!MEID){ var a=false; try{ a=sessionStorage.getItem("fn_anon")==="1"; }catch(e){} if(!a) showWelcome("anon"); return; }
+  if(!readonly&&nickLoaded&&!myNick){ showWelcome("hello"); return; }
+  if(!readonly&&settingsLoaded&&!settings.side){ showWelcome("side"); return; }
+  var seen=false; try{ seen=localStorage.getItem("fn_safety_v1")==="1"; }catch(e){}
+  if(!seen){ $("safety").hidden=false; return; }
+  if(settingsLoaded&&!readonly&&!settings.mode){
+    var box=$("setupOpts"); box.textContent="";
+    modeOptions(box,setupPick);
+    $("setup").hidden=false; return;
+  }
+  if(viewSide==="dogs"&&!dogSafeSeen()) $("dogSafety").hidden=false;
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  applyStatic(); buildChips(); buildTab();
+  document.querySelectorAll(".tabs button").forEach(function(b){ b.addEventListener("click",function(){ go(b.getAttribute("data-tab")); }); });
+  $("closeBtn").addEventListener("click",function(){ $("sheet").hidden=true; });
+  $("submitBtn").addEventListener("click",submit);
+  $("dogSafeOk").addEventListener("click",function(){ $("dogSafety").hidden=true; try{ localStorage.setItem("fn_dogsafe_v1","1"); }catch(e){} });
+  $("safeOk").addEventListener("click",function(){ $("safety").hidden=true; try{ localStorage.setItem("fn_safety_v1","1"); }catch(e){} maybeSetup(); });
+
+  USER=await claude.use("user");
+  if(USER){ ME=await USER.me(); MEID=ME.id; var cw=await USER.can("data.write"); if(cw===false) readonly=true; }
+  DB=await claude.use("db");
+  if(!DB){ bootDone=true; maybeSetup(); loaded=true; var v=$("view"); v.textContent=""; v.appendChild(stateBox(T("暂时连不上"),T("活动列表需要联网才能看到。稍后再打开试试。"))); return; }
+
+  if(MEID){
+    try{
+      var r=await Promise.all([DB.doc("data/users/"+MEID+"/settings").get(),DB.doc("data/users/"+MEID+"/profile").get(),DB.doc("data/users/"+MEID+"/mine").get(),DB.doc("profiles/"+MEID).get()]);
+      if(r[3].exists&&r[3].data()&&r[3].data().nick){ myNick=cleanNick(r[3].data().nick); nicks[MEID]=myNick; }
+      if(r[0].exists){ var s=r[0].data()||{}; settings={mode:s.mode||null,blocks:s.blocks||{},side:s.side||null,lang:s.lang||null}; }
+      if(r[1].exists&&r[1].data()&&r[1].data().weight) weight=Number(r[1].data().weight);
+      if(r[2].exists){ var mm=r[2].data()||{}; myState={acts:mm.acts||{},here:mm.here||{}}; }
+      else{ var gs=await DB.doc("going/"+MEID).get(); if(gs.exists){ var gd=gs.data()||{}; myState={acts:gd.acts||{},here:gd.here||{}}; } }
+    }catch(e){}
+    settingsLoaded=true; nickLoaded=true;
+  }
+  if(!LS_LANG&&settings.lang&&LANG_HTML[settings.lang]&&settings.lang!==LANG) setLang(settings.lang,false);
+  var ls=null; try{ ls=localStorage.getItem("fn_side"); }catch(e){}
+  viewSide=(ls==="dogs"||ls==="people")?ls:(settings.side==="dogs"?"dogs":"people");
+  bootDone=true;
+
+  DB.collection("activities").onSnapshot(function(s){
+    acts=s.docs.map(function(d){ var v=d.data()||{}; return {id:d.id,title:v.title,place:v.place,day:v.day,time:v.time,mins:Number(v.mins)||0,met:Number(v.met)||metOf(v.title||""),by:v.by,side:v.side==="dogs"?"dogs":"people",size:SIZES[v.size]?v.size:"any"}; });
+    loaded=true; render();
+  },function(){ loaded=true; render(); });
+  DB.collection("going").onSnapshot(function(s){ var g={}; s.docs.forEach(function(d){ g[d.id]=d.data()||{}; }); going=g; if(!readyGoing){ readyGoing=true; schedulePublish(800); } render(); },function(){});
+  DB.collection("follows").onSnapshot(function(s){ var f={}; s.docs.forEach(function(d){ f[d.id]=d.data()||{}; }); follows=f; syncInbox(); if(settings.mode==="friends") schedulePublish(1500); render(); },function(){});
+  DB.collection("keys").onSnapshot(function(s){ var k={}; s.docs.forEach(function(d){ var v=d.data(); if(v&&v.jwk) k[d.id]=v.jwk; }); if(KP) k[MEID]=KP.pub; pubKeys=k; decryptShares(); if(settings.mode==="friends") schedulePublish(1500); },function(){});
+  DB.collection("profiles").onSnapshot(function(s){ var m={}; s.docs.forEach(function(d){ var v=d.data(); if(v&&typeof v.nick==="string"){ var n=cleanNick(v.nick); if(n) m[d.id]=n; } }); nicks=m; if(MEID&&m[MEID]) myNick=m[MEID]; render(); },function(){});
+  DB.collection("dogs").onSnapshot(function(s){
+    var m={}; s.docs.forEach(function(d){ var v=d.data(); if(v&&Array.isArray(v.list)) m[d.id]=v.list.filter(function(x){ return x&&typeof x==="object"; }).slice(0,3).map(function(x){
+      return {name:cleanNick(x.name),breed:cleanNick(x.breed),size:DOGSIZE[x.size]?x.size:"",temper:TEMPER[x.temper]?x.temper:"",vax:x.vax===true}; }); });
+    dogsBy=m; render();
+  },function(){});
+  DB.collection("shares").onSnapshot(function(s){ var x={}; s.docs.forEach(function(d){ x[d.id]=d.data()||{}; }); sharesRaw=x; decryptShares(); },function(){});
+
+  if(MEID&&!readonly){ ensureKeys().then(function(){ decryptShares(); schedulePublish(0); }); }
+  maybeSetup(); render();
+}
+if(window.claude&&window.claude.use) boot(); else { applyStatic(); loaded=true; buildTab(); render(); }
+})();
+</script>
